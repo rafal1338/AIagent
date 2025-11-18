@@ -9,13 +9,13 @@
 
 ## 💡 Diagram Architektury Mermaid
 ```mermaid
-%% Definicja Stylów
+graph TD
+    %% Definicja Stylów
     classDef llm fill:#e0f7fa,stroke:#00bcd4,stroke-width:2px;
     classDef db fill:#fff3e0,stroke:#ff9800,stroke-width:2px;
     classDef agent fill:#e8f5f5,stroke:#4caf50,stroke-width:2px;
     classDef tool fill:#f3e5f5,stroke:#9c27b0,stroke-width:1px;
     classDef io fill:#fbe9e7,stroke:#ff5722,stroke-width:2px;
-
 
     %% Węzły
     subgraph Core Technologies
