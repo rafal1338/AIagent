@@ -60,6 +60,7 @@ graph TD
     DOC -->|`read_file` / `write_file`| FT
 
     FT --> FS
+```
 </details>
 
 ---
