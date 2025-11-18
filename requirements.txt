@@ -1,7 +1,9 @@
 flask
 python-dotenv
 langgraph
-langchain-ollama
+langchain
 langchain-core
+langchain-community
+langchain-ollama
 langchain-chroma
 chromadb
