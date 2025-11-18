@@ -31,7 +31,7 @@ graph TD
         QA(5. Tester/QA):::agent
     end
 
-    subgraph Tools (LangChain Tools)
+    subgraph LangChain Tools
         FT[FileManagementTool]:::tool
     end
 
