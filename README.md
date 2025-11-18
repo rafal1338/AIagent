@@ -4,7 +4,8 @@
 ---
 <details>
   <summary id="koncept">Koncept</summary>
-  # 🚀 Koncept Sieci Agentów Programistycznych (DevTeam)
+  
+# 🚀 Koncept Sieci Agentów Programistycznych (DevTeam)
 
 ## 💡 Diagram Architektury Mermaid
 ```mermaid
