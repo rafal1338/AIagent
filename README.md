@@ -9,59 +9,56 @@
 ## 💡 Diagram Architektury Mermaid
 ```mermaid
 erDiagram
-    %% RELACJE
-    ApplicationUser ||--o{ Podmiot : "jest_powiazany_z_jednym"
-    ApplicationUser ||--o{ Wiadomosc : "jest_autorem"
-    Podmiot ||--o{ Grupa : "N{posiada_przynaleznosc}M"
-    Grupa ||--o{ Watek : "1{jest_kategoria}N"
-    Watek ||--o{ Wiadomosc : "1{zawiera_posty}N"
-    Wiadomosc ||--o{ ApplicationUser : "N{autor}1"
-    Wiadomosc ||--o{ Zalacznik : "N{zawiera}M"
-    Grupa ||--o{ ApplicationUser : "N{ma_dostep_do}M"
-    
-    %% DEFINICJA TABEL
-    ApplicationUser {
-        string Id PK "PK z AspNet Identity"
-        string UserName
-        string Rola
-        int PodmiotId FK "FK do Podmiot"
-        datetime LockoutEnd
-    }
-    
-    Podmiot {
-        int Id PK
-        string Nazwa
-        bool IsActive
-        string NIP         
-        string REGON       
-    }
+    %% Definicja Stylów
+    classDef llm fill:#e0f7fa,stroke:#00bcd4,stroke-width:2px;
+    classDef db fill:#fff3e0,stroke:#ff9800,stroke-width:2px;
+    classDef agent fill:#e8f5e9,stroke:#4caf50,stroke-width:2px;
+    classDef tool fill:#f3e5f5,stroke:#9c27b0,stroke-width:1px;
+    classDef io fill:#fbe9e7,stroke:#ff5722,stroke-width:2px;
 
-    Grupa {
-        int Id PK
-        string Nazwa
-        bool IsActive
-    }
+    %% Węzły
+    subgraph Core Technologies
+        O[Ollama LLMs]:::llm
+        C(ChromaDB\nPamięć Długoterminowa):::db
+        FS[System Plików (Dysk)]:::io  %% POPRAWIONA LINIA
+    end
 
-    Watek {
-        int Id PK
-        string Temat
-        int GrupaId FK
-    }
+    subgraph LangChain Agents
+        PM(1. PM - Menadżer Projektu):::agent
+        ARC(2. Architekt/Projektant):::agent
+        COD(3. Programista/Koder):::agent
+        DOC(4. Dokumentalista):::agent
+        QA(5. Tester/QA):::agent
+    end
 
-    Wiadomosc {
-        int Id PK
-        string Tresc
-        datetime DataWyslania
-        int WatekId FK
-        string AutorId FK
-    }
+    subgraph Narzędzia (LangChain Tools)
+        FT[FileManagementTool]:::tool
+    end
 
-    Zalacznik {
-        int Id PK
-        string OryginalnaNazwa
-        string SciezkaPliku
-        string TypMIME
-    }
+    %% Połączenia Komunikacji (LLM)
+    O --- PM
+    O --- ARC
+    O --- COD
+    O --- DOC
+    O --- QA
+
+    %% Połączenia RAG (Pamięć)
+    PM -->|Zapisuje: Plan| C
+    C -->|Pobiera: Plan| ARC
+    ARC -->|Zapisuje: Specyfikacja| C
+    C -->|Pobiera: Specyfikacja/Kod| COD
+    COD -->|Zapisuje: Wygenerowany Kod| C
+    C -->|Pobiera: Wszystko| DOC
+    QA -->|Zapisuje: Raporty Błędów| C
+
+    %% Połączenia Narzędzia (I/O)
+    PM -->|`create_directory`| FT
+    ARC -->|`create_directory` / `write_file`| FT
+    COD -->|`write_file`| FT
+    QA -->|`read_file` / `write_file`| FT
+    DOC -->|`read_file` / `write_file`| FT
+
+    FT --> FS
 ```
 </details>
 
