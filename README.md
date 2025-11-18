@@ -24,14 +24,14 @@ graph TD
     end
 
     subgraph LangChain Agents
-        PM(1. PM - Menadżer Projektu):::agent
-        ARC(2. Architekt/Projektant):::agent
-        COD(3. Programista/Koder):::agent
+        PM(1. PM - Project Manager):::agent
+        ARC(2. Architect/Designer):::agent
+        COD(3. Programista/Coder):::agent
         DOC(4. Dokumentalista):::agent
         QA(5. Tester/QA):::agent
     end
 
-    subgraph Narzędzia (LangChain Tools)
+    subgraph Tools (LangChain Tools)
         FT[FileManagementTool]:::tool
     end
 
