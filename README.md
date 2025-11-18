@@ -8,7 +8,7 @@
 
 ## 💡 Diagram Architektury Mermaid
 ```mermaid
-graph TD
+  graph TD
     %% Definicja Stylów
     classDef llm fill:#e0f7fa,stroke:#00bcd4,stroke-width:2px;
     classDef db fill:#fff3e0,stroke:#ff9800,stroke-width:2px;
@@ -20,7 +20,7 @@ graph TD
     subgraph Core Technologies
         O[Ollama LLMs]:::llm
         C(ChromaDB\nPamięć Długoterminowa):::db
-        FS[System Plików (Dysk)]:::io  %% POPRAWIONA LINIA
+        FS[System Plików (Dysk)]:::io  %% 
     end
 
     subgraph LangChain Agents
