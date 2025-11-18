@@ -7,8 +7,7 @@
   # 🚀 Koncept Sieci Agentów Programistycznych (DevTeam)
 
 ## 💡 Diagram Architektury Mermaid
-
-```mermaid
+```mermaind
 graph TD
     %% Definicja Stylów
     classDef llm fill:#e0f7fa,stroke:#00bcd4,stroke-width:2px;
@@ -21,7 +20,7 @@ graph TD
     subgraph Core Technologies
         O[Ollama LLMs]:::llm
         C(ChromaDB\nPamięć Długoterminowa):::db
-        FS[\System Plików (Dysk)/]:::io
+        FS[System Plików (Dysk)]:::io  %% POPRAWIONA LINIA
     end
 
     subgraph LangChain Agents
@@ -60,7 +59,7 @@ graph TD
     DOC -->|`read_file` / `write_file`| FT
 
     FT --> FS
-```
+    ```
 </details>
 
 ---
