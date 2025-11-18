@@ -7,7 +7,7 @@
   # 🚀 Koncept Sieci Agentów Programistycznych (DevTeam)
 
 ## 💡 Diagram Architektury Mermaid
-```mermaind
+```mermaid
 graph TD
     %% Definicja Stylów
     classDef llm fill:#e0f7fa,stroke:#00bcd4,stroke-width:2px;
