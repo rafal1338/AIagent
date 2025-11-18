@@ -8,7 +8,7 @@
 
 ## 💡 Diagram Architektury Mermaid
 ```mermaid
-erDiagram
+graph TD
     %% Definicja Stylów
     classDef llm fill:#e0f7fa,stroke:#00bcd4,stroke-width:2px;
     classDef db fill:#fff3e0,stroke:#ff9800,stroke-width:2px;
