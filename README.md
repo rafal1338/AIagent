@@ -20,7 +20,7 @@ graph TD
     subgraph Core Technologies
         O[Ollama LLMs]:::llm
         C(ChromaDB\nPamięć Długoterminowa):::db
-        FS[System Plików ('Dysk')]:::io  %% POPRAWIONA LINIA
+        FS[System Plików (dysk)]:::io  %% POPRAWIONA LINIA
     end
 
     subgraph LangChain Agents
