@@ -1,14 +1,23 @@
 import os
+# Używamy nowej przestrzeni nazw zgodnie z wymaganiami
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
-from langchain_core.messages import HumanMessage, SystemMessage # <-- Dodano SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from tools import coder_tools
 
-# --- 1. Konfiguracja Modelu ---
+# --- 1. Konfiguracja Modelu z SSL i Auth ---
 llm = ChatOllama(
     model="qwen2-coder:30b",
-    base_url="http://localhost:11434",
+    # Zmieniono na HTTPS, ponieważ wspomniałeś o certyfikatach SSL
+    base_url="https://localhost:11434", 
     temperature=0,
+    # Przekazujemy argumenty do klienta HTTP (httpx)
+    client_kwargs={
+        "verify": False,  # Wyłączenie weryfikacji SSL (self-signed cert)
+        "headers": {
+            "Authorization": "Bearer token"  # Dodanie nagłówka autoryzacyjnego
+        }
+    }
 )
 
 # --- 2. Prompt Systemowy ---
@@ -24,8 +33,8 @@ ZASADY KRYTYCZNE:
 """
 
 # --- 3. Tworzenie Agenta (LangGraph) ---
-# POPRAWKA: Usuwamy sporne parametry (state_modifier/messages_modifier).
-# Tworzymy czystego agenta, a prompt przekażemy w wiadomościach.
+# Tworzymy agenta bez 'state_modifier' w konstruktorze, aby uniknąć błędów wersji.
+# Instrukcje przekażemy w wiadomościach.
 agent_app = create_react_agent(llm, coder_tools)
 
 def run_coder_agent(task: str):
@@ -34,8 +43,8 @@ def run_coder_agent(task: str):
     """
     print(f"🚀 [LangGraph] Agent Programista otrzymał zadanie: {task}")
     
-    # POPRAWKA: Przekazujemy System Prompt jako pierwszą wiadomość w liście.
-    # To działa zawsze, niezależnie od wersji LangGraph.
+    # Przekazujemy System Prompt jako pierwszą wiadomość.
+    # To jest najbardziej kompatybilny sposób przekazywania instrukcji w LangGraph.
     messages = [
         SystemMessage(content=SYSTEM_PROMPT),
         HumanMessage(content=task)
@@ -58,6 +67,7 @@ def run_coder_agent(task: str):
 
 # --- Testowanie ---
 if __name__ == "__main__":
-    print("Testowanie Agenta...")
-    res = run_coder_agent("Napisz plik 'test.py' wypisujący 'Hello World'")
+    print("Testowanie Agenta z konfiguracją SSL/Auth...")
+    # Pamiętaj, że test zadziała tylko jeśli masz uruchomioną Ollamę na HTTPS z tokenem
+    res = run_coder_agent("Napisz plik 'ssl_test.py' wypisujący 'Połączenie bezpieczne!'")
     print(res['output'])
