@@ -60,7 +60,7 @@ graph TD
 
     FT --> FS
 
-    ```
+```
 </details>
 
 ---
