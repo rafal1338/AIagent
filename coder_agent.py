@@ -23,39 +23,48 @@ llm = ChatOllama(
     }
 )
 
-# --- ZOPTYMALIZOWANE PROMPTY (Krótsze = Szybsze) ---
+# --- PROMPTY ---
 
 CODER_PROMPT = """Jesteś Senior Developerem.
-ZASADY:
-1. DRY (Don't Repeat Yourself): Edytuj istniejące pliki, nie twórz duplikatów.
-2. C#: Uważaj na namespace'y. Nie redefiniuj klas.
-3. Pisz pełny kod. Żadnych skrótów typu '# ...'.
-Cel: Działający kod."""
+TWOIM CELEM JEST EFEKTYWNOŚĆ.
 
-VERIFIER_PROMPT = """Jesteś Architektem.
-ANALIZA: Zadanie vs Obecne Pliki.
-CEL: Wykrycie czy zadanie nie spowoduje duplikacji (np. backend_v2).
-AKCJA: Jeśli wykryjesz ryzyko, zmień zadanie na 'Zaktualizuj istniejący plik...'.
-Jeśli bezpieczne -> zwróć bez zmian."""
+ZASADY KRYTYCZNE:
+1. **NAZWY PLIKÓW**: Jeśli w zadaniu podano nazwę pliku (np. 'main.py'), UŻYJ JEJ. Nie wymyślaj własnych ('main_app.py').
+2. **EDYCJA**: Zanim napiszesz kod, sprawdź czy plik istnieje. Jeśli tak -> NADPISZ GO ulepszoną wersją. Nie twórz duplikatów.
+3. **SAMOKONTROLA**: Zanim zapiszesz plik, upewnij się, że kod jest kompletny (brak '# ...').
+4. **TOOLS**: Używaj 'write_code_file' do zapisywania wyników.
 
-REVIEWER_PROMPT = """Jesteś QA Lead.
-OCENA:
-1. Duplikaty (klasy/funkcje)?
-2. Spaghetti code?
-3. Czy plik faktycznie powstał?
-DECYZJA:
-- "APPROVED" (jeśli OK)
-- "CHANGES_REQUESTED: <zwięzła lista błędów>" (jeśli źle)
-Bądź surowy ale konkretny."""
+Działaj szybko i precyzyjnie.
+"""
 
-# Agenci
+# Verifier ma teraz kluczowe zadanie: mapowanie niejasnych poleceń na konkretne pliki
+VERIFIER_PROMPT = """Jesteś Architektem Systemu (Deduplication Guard).
+
+TWOJE ZADANIE:
+Masz przed sobą ZADANIE i LISTĘ PLIKÓW.
+Musisz przepisać zadanie tak, aby wymusić użycie istniejących plików.
+
+PRZYKŁADY:
+- Zadanie: "Stwórz backend". Pliki: ['app.py']. 
+  -> Wynik: "Zaktualizuj istniejący plik 'app.py' o logikę backendu."
+  
+- Zadanie: "Dodaj style". Pliki: ['styles/main.css']. 
+  -> Wynik: "Edytuj plik 'styles/main.css'."
+
+- Zadanie: "Stwórz plik utils.py". Pliki: [].
+  -> Wynik: "Stwórz nowy plik 'utils.py'."
+
+Jeśli zadanie jest ogólne, SKONKRETYZUJ JE o nazwy plików z listy.
+Odpowiedz TYLKO treścią nowego zadania.
+"""
+
+# Tworzymy agentów
 coder_app = create_react_agent(llm, all_tools)
 verifier_app = create_react_agent(llm, all_tools) 
-reviewer_app = create_react_agent(llm, all_tools)
 
-def run_coder_agent(task: str, max_steps: int = 50):
-    """Główny wykonawca - potrzebuje dużo kroków."""
-    print(f"🚀 [Coder] Start...")
+def run_coder_agent(task: str, max_steps: int = 40):
+    """Główny wykonawca - limit zmniejszony do 40 dla szybkości, ale wystarczający."""
+    print(f"🚀 [Coder] Pracuję nad: {task[:50]}...")
     try:
         result = coder_app.invoke(
             {"messages": [SystemMessage(content=CODER_PROMPT), HumanMessage(content=task)]}, 
@@ -66,29 +75,16 @@ def run_coder_agent(task: str, max_steps: int = 50):
         return {"output": f"❌ Błąd: {e}"}
 
 def run_verifier_agent(original_task: str, current_structure: str):
-    """Weryfikator - szybka analiza (mało kroków)."""
-    print(f"🧐 [Verifier] Analiza...")
-    msg = f"ZADANIE: {original_task}\nPLIKI:\n{current_structure}\nZwróć bezpieczne polecenie."
+    """Szybka analiza (max 5 kroków) mająca na celu wykrycie duplikatów."""
+    print(f"🧐 [Verifier] Sprawdzam spójność plików...")
+    msg = f"ZADANIE: {original_task}\nOBECNE PLIKI W PROJEKCIE:\n{current_structure}\nZwróć konkretne polecenie dla programisty."
     try:
-        # Optymalizacja: Limit tylko 10 kroków - on ma tylko myśleć, nie kodować
+        # Bardzo niski limit kroków - on ma tylko pomyśleć i odpisać, nie używać narzędzi
         result = verifier_app.invoke(
             {"messages": [SystemMessage(content=VERIFIER_PROMPT), HumanMessage(content=msg)]}, 
-            config={"recursion_limit": 10}
+            config={"recursion_limit": 5} 
         )
         return result["messages"][-1].content
     except Exception:
+        # W razie błędu zwracamy oryginał
         return original_task
-
-def run_code_reviewer(task_context: str, recent_changes: str, file_structure: str):
-    """Reviewer - szybka ocena (mało kroków)."""
-    print(f"⚖️ [Reviewer] Audyt...")
-    msg = f"ZADANIE: {task_context}\nZMIANY: {recent_changes}\nPLIKI:\n{file_structure}\nOceń."
-    try:
-        # Optymalizacja: Limit 15 kroków
-        result = reviewer_app.invoke(
-            {"messages": [SystemMessage(content=REVIEWER_PROMPT), HumanMessage(content=msg)]},
-            config={"recursion_limit": 15}
-        )
-        return result["messages"][-1].content
-    except Exception:
-        return "APPROVED"
