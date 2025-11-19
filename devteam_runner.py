@@ -1,68 +1,71 @@
+# devteam_runner.py
 from coder_agent import run_coder_agent
-from tools import write_code_file, read_project_spec
+# Importujemy narzędzie do listowania plików
+from tools import write_code_file, list_project_files
 
 def run_devteam_pipeline(initial_task: str) -> str:
     """
-    Główna funkcja orkiestrująca proces: PM -> Coder -> Raport.
+    Orkiestrator tworzenia całych projektów wieloplikowych.
     """
     
-    # --- KROK 1: PM (Project Manager) ---
-    print("🤖 [DevTeam 1/3] Project Manager analizuje wymagania...")
+    # --- KROK 1: Specyfikacja Projektu ---
+    print("🤖 [DevTeam] Analiza wymagań projektu...")
     
-    # Tworzymy specyfikację dla Agenta
     spec_content = f"""
     # Specyfikacja Projektu
-    Zadanie: {initial_task}
+    Zadanie Użytkownika: {initial_task}
     
-    Wymagania Techniczne:
-    1. Język: Python / Odpowiedni dla zadania (Angular/.NET w zależności od opisu)
-    2. Główny plik wynikowy: 'main_app.py' (lub odpowiedni plik startowy)
-    3. Kod musi być kompletny.
+    Wytyczne:
+    1. Dobierz odpowiedni język i technologie do zadania.
+    2. Zaplanuj strukturę folderów (np. src/, tests/, assets/).
+    3. Utwórz WSZYSTKIE niezbędne pliki.
     """
     
-    # NAPRAWA: Używamy .invoke() zamiast bezpośredniego wywołania funkcji
-    # Ponieważ write_code_file jest obiektem @tool, wymaga słownika argumentów.
-    write_result = write_code_file.invoke({
-        "filename": "specyfikacja.md", 
+    # Zapis specyfikacji
+    write_code_file.invoke({
+        "filepath": "SPECYFIKACJA_PROJEKTU.md", 
         "content": spec_content
     })
-    print(f"   -> Specyfikacja zapisana: {write_result}")
     
-    # --- KROK 2: Coder (LangGraph Agent) ---
-    print("🤖 [DevTeam 2/3] Przekazywanie zadania do Programisty...")
+    # --- KROK 2: Generowanie Projektu ---
+    print("🤖 [DevTeam] Budowanie struktury projektu...")
     
     coder_task = (
-        "Przeczytaj plik 'specyfikacja.md'. "
-        "Następnie napisz wymagany kod aplikacji i zapisz go jako 'main_app.py' (lub inny główny plik). "
-        "Upewnij się, że kod jest poprawny."
+        "Zapoznaj się z 'SPECYFIKACJA_PROJEKTU.md'. "
+        "Następnie stwórz kompletny projekt. "
+        "Utwórz odpowiednie foldery i pliki z kodem źródłowym. "
+        "Pamiętaj o plikach konfiguracyjnych (np. package.json, requirements.txt)."
     )
     
-    # Uruchamiamy agenta (tutaj jest OK, bo agent sam wie jak używać narzędzi)
     coder_result = run_coder_agent(coder_task)
     
-    # --- KROK 3: Raportowanie ---
-    print("🤖 [DevTeam 3/3] Generowanie raportu końcowego...")
+    # --- KROK 3: Raport Końcowy ---
+    print("🤖 [DevTeam] Generowanie podsumowania...")
     
-    # Próbujemy odczytać wygenerowany plik
+    # Pobieramy strukturę plików, żeby pokazać użytkownikowi co powstało
     try:
-        # NAPRAWA: Tutaj również używamy .invoke() dla narzędzia odczytu
-        generated_code = read_project_spec.invoke({"filename": "main_app.py"})
-    except Exception:
-        generated_code = "⚠️ BŁĄD: Nie znaleziono pliku 'main_app.py'. Agent mógł użyć innej nazwy lub wystąpił błąd."
+        project_structure = list_project_files.invoke({})
+    except Exception as e:
+        project_structure = f"Błąd pobierania struktury: {e}"
 
     final_report = f"""
-    # 🚀 Raport AI DevTeam
+    # 🚀 Raport DevTeam: Nowy Projekt
     
     ## 🎯 Zadanie
     {initial_task}
     
-    ## 🤖 Komentarz Agenta
-    {coder_result.get('output', 'Brak odpowiedzi słownej.')}
+    ## 📂 Struktura Utworzonego Projektu
+    Poniżej znajduje się lista plików i folderów utworzonych w katalogu `program/`:
     
-    ## 📄 Wygenerowany Kod (main_app.py)
-    ```python
-    {generated_code}
+    ```text
+    {project_structure}
     ```
+    
+    ## 💬 Komentarz Agenta
+    {coder_result.get('output', 'Zadanie zakończone.')}
+    
+    ---
+    *Pliki znajdują się w folderze 'program' w katalogu aplikacji.*
     """
     
     return final_report
