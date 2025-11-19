@@ -2,33 +2,72 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>AI DevTeam Agent</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI DevTeam | JetBrains Style</title>
     
+    <!-- Fonty: Inter UI + JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Style CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+    <!-- Główny kontener przypominający okno IDE -->
     <div class="container">
-        <h1>🚀 Sieć Agentów Programistycznych (DevTeam)</h1>
-
-        <form method="POST">
-            <label for="task_input">Opisz projekt, który agenci mają zrealizować:</label>
-            <textarea id="task_input" name="task_input" rows="5" placeholder="Np. Napisz aplikację Python, która liczy słowa w pliku tekstowym." required>{{ task or '' }}</textarea>
-            <button type="submit">Uruchom DevTeam</button>
-        </form>
-
-        {% if error %}
-            <div class="error-box"><b>Błąd:</b> {{ error }}</div>
-        {% endif %}
-
-        {% if result %}
-            <div class="task-summary">
-                Zadanie przyjęte: **{{ task }}**
+        <header>
+            <h1>
+                <i class="fa-brands fa-python" style="color: #3574f0;"></i> 
+                AI DevTeam Agent
+            </h1>
+            <!-- Atrapy przycisków okna -->
+            <div style="display: flex; gap: 8px;">
+                <i class="fa-solid fa-window-minimize" style="color: var(--jb-text); cursor: pointer;"></i>
+                <i class="fa-regular fa-square" style="color: var(--jb-text); cursor: pointer;"></i>
+                <i class="fa-solid fa-xmark" style="color: var(--jb-text); cursor: pointer;"></i>
             </div>
-            <div class="result-box">
-                <h2>📜 Raport Końcowy Agenta DOC</h2>
-                {{ result }}
-            </div>
-        {% endif %}
+        </header>
+
+        <main>
+            <form method="POST" onsubmit="document.getElementById('loader').style.display='flex'">
+                <div class="form-group">
+                    <label for="task_input">Terminal Input / Task Description</label>
+                    <textarea id="task_input" name="task_input" placeholder="# Wpisz tutaj swoje polecenie dla Agenta..." required autofocus>{{ task }}</textarea>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <button type="submit">
+                        <i class="fa-solid fa-play" style="font-size: 0.8em; margin-right: 5px;"></i> Run Agent
+                    </button>
+                    
+                    <!-- Loader w stylu IDE (na dole po prawej) -->
+                    <div id="loader" style="display: none; align-items: center; gap: 10px; color: var(--jb-text); font-size: 12px;">
+                        <span>Processing...</span>
+                        <i class="fa-solid fa-circle-notch fa-spin" style="color: var(--jb-blue);"></i>
+                    </div>
+                </div>
+            </form>
+
+            {% if error %}
+                <div class="error">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span>{{ error }}</span>
+                </div>
+            {% endif %}
+
+            {% if result %}
+                <div class="result-container">
+                    <div class="result-header">
+                        <i class="fa-solid fa-code"></i> Output / main_app.py
+                    </div>
+                    <div class="result">{{ result }}</div>
+                </div>
+            {% endif %}
+        </main>
     </div>
 </body>
 </html>

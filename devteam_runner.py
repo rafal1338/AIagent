@@ -15,24 +15,29 @@ def run_devteam_pipeline(initial_task: str) -> str:
     Zadanie: {initial_task}
     
     Wymagania Techniczne:
-    1. Język: Python
-    2. Główny plik wynikowy: 'main_app.py'
-    3. Kod musi być kompletny i gotowy do uruchomienia.
+    1. Język: Python / Odpowiedni dla zadania (Angular/.NET w zależności od opisu)
+    2. Główny plik wynikowy: 'main_app.py' (lub odpowiedni plik startowy)
+    3. Kod musi być kompletny.
     """
     
-    # Zapisujemy specyfikację na dysku
-    write_code_file("specyfikacja.md", spec_content)
+    # NAPRAWA: Używamy .invoke() zamiast bezpośredniego wywołania funkcji
+    # Ponieważ write_code_file jest obiektem @tool, wymaga słownika argumentów.
+    write_result = write_code_file.invoke({
+        "filename": "specyfikacja.md", 
+        "content": spec_content
+    })
+    print(f"   -> Specyfikacja zapisana: {write_result}")
     
     # --- KROK 2: Coder (LangGraph Agent) ---
     print("🤖 [DevTeam 2/3] Przekazywanie zadania do Programisty...")
     
     coder_task = (
         "Przeczytaj plik 'specyfikacja.md'. "
-        "Następnie napisz wymagany kod Python i zapisz go jako 'main_app.py'. "
+        "Następnie napisz wymagany kod aplikacji i zapisz go jako 'main_app.py' (lub inny główny plik). "
         "Upewnij się, że kod jest poprawny."
     )
     
-    # Uruchamiamy agenta
+    # Uruchamiamy agenta (tutaj jest OK, bo agent sam wie jak używać narzędzi)
     coder_result = run_coder_agent(coder_task)
     
     # --- KROK 3: Raportowanie ---
@@ -40,9 +45,10 @@ def run_devteam_pipeline(initial_task: str) -> str:
     
     # Próbujemy odczytać wygenerowany plik
     try:
-        generated_code = read_project_spec("main_app.py")
+        # NAPRAWA: Tutaj również używamy .invoke() dla narzędzia odczytu
+        generated_code = read_project_spec.invoke({"filename": "main_app.py"})
     except Exception:
-        generated_code = "⚠️ BŁĄD: Nie znaleziono pliku 'main_app.py'."
+        generated_code = "⚠️ BŁĄD: Nie znaleziono pliku 'main_app.py'. Agent mógł użyć innej nazwy lub wystąpił błąd."
 
     final_report = f"""
     # 🚀 Raport AI DevTeam

@@ -1,67 +1,199 @@
-body { 
-    font-family: 'Segoe UI', sans-serif; 
-    background-color: #1e1e1e; 
-    color: #d4d4d4; 
+/* --- Paleta Kolorów JetBrains Darcula / New UI --- */
+:root {
+    --jb-bg: #1e1f22;          /* Główne tło (IDE) */
+    --jb-panel: #2b2d30;       /* Tło panelu/okna */
+    --jb-border: #43454a;      /* Obramowania */
+    --jb-blue: #3574f0;        /* Główny niebieski akcent */
+    --jb-blue-hover: #3065d0;
+    --jb-text: #bcbec4;        /* Standardowy tekst */
+    --jb-text-bright: #ffffff; /* Nagłówki */
+    --jb-code-bg: #1e1f22;     /* Tło edytora kodu */
+    --jb-input-bg: #1e1f22;    /* Tło inputów */
+    --jb-selection: #214283;   /* Zaznaczenie */
+    --jb-error: #cf514e;       /* Błędy */
+}
+
+* {
+    box_sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--jb-bg);
+    color: var(--jb-text);
+    /* Zmiana: min-height zamiast height i padding dla odstępu */
+    min-height: 100vh;
     padding: 20px; 
+    display: flex;
+    justify_content: center;
+    align-items: center;
+    font-size: 13px;
+    /* Zmiana: auto pozwala na scrollowanie jeśli okno jest za małe */
+    overflow-y: auto; 
 }
-.container { 
-    max-width: 900px; 
-    margin: 0 auto; 
-    background-color: #252526; 
-    padding: 30px; 
-    border-radius: 10px; 
-    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+
+/* --- Kontener Główny (Okno Dialogowe) --- */
+.container {
+    width: 100%;
+    max-width: 1000px;
+    /* Zmiana: elastyczna wysokość */
+    height: 85vh; 
+    min-height: 500px; 
+    margin: 0 auto; /* Dodatkowe zabezpieczenie centrowania */
+    
+    background-color: var(--jb-panel);
+    border: 1px solid var(--jb-border);
+    border-radius: 8px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); /* Mocniejszy cień dla efektu "okna" */
+    display: flex;
+    flex-direction: column;
 }
-h1 { 
-    color: #61dafb; 
-    text-align: center; 
-    margin-bottom: 30px;
+
+/* --- Nagłówek (Pasek Tytułowy) --- */
+header {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--jb-border);
+    background-color: var(--jb-panel);
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0; /* Nagłówek nie może się kurczyć */
 }
-textarea { 
-    width: 100%; 
-    padding: 15px; 
-    background-color: #3c3c3c; 
-    color: white; 
-    border: 1px solid #555; 
-    border-radius: 5px; 
-    font-size: 16px; 
-    resize: vertical; 
-    margin-bottom: 15px; 
-    box-sizing: border-box; /* Dodano dla poprawności */
+
+h1 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--jb-text-bright);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
-button { 
-    width: 100%; 
-    padding: 15px; 
-    background-color: #0e639c; 
-    color: white; 
-    border: none; 
-    border-radius: 5px; 
-    font-size: 18px; 
-    cursor: pointer; 
-    transition: background-color 0.3s;
+
+/* --- Główna zawartość (Scrollowana) --- */
+main {
+    padding: 25px; /* Większy padding wewnątrz */
+    overflow-y: auto;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
-button:hover { 
-    background-color: #1177bb; 
+
+/* --- Formularz --- */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
-.result { 
-    margin-top: 30px; 
-    background-color: #1e1e1e; 
-    padding: 20px; 
-    border-radius: 5px; 
-    border-left: 5px solid #61dafb; 
-    white-space: pre-wrap; 
+
+label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--jb-text);
+    letter-spacing: 0.5px;
 }
-.error { 
-    background-color: #5a1d1d; 
-    color: #ffcccc; 
-    padding: 15px; 
-    border-radius: 5px; 
-    margin-top: 20px; 
+
+textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 12px;
+    background-color: var(--jb-input-bg);
+    border: 1px solid var(--jb-border);
+    border-radius: 4px;
+    color: var(--jb-text-bright);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
 }
-code { 
-    background-color: #111; 
-    padding: 2px 5px; 
-    border-radius: 3px; 
-    font-family: 'Courier New', monospace; 
-    color: #ce9178; 
+
+textarea:focus {
+    border-color: var(--jb-blue);
+}
+
+/* --- Przycisk (Primary Action) --- */
+button {
+    align-self: flex-start;
+    padding: 9px 20px;
+    background-color: var(--jb-blue);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: var(--jb-blue-hover);
+}
+
+/* --- Wyniki (Wygląd Terminala/Edytora) --- */
+.result-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-grow: 1;
+    min-height: 250px;
+    margin-top: 10px;
+}
+
+.result-header {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--jb-text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.result {
+    background-color: var(--jb-code-bg);
+    border: 1px solid var(--jb-border);
+    padding: 20px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: #a9b7c6;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    flex-grow: 1;
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.2);
+}
+
+/* --- Komunikaty Błędów --- */
+.error {
+    background-color: rgba(207, 81, 78, 0.1);
+    color: var(--jb-error);
+    border: 1px solid var(--jb-error);
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* --- Scrollbar (Styl IDE) --- */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-track {
+    background: var(--jb-bg); 
+}
+::-webkit-scrollbar-thumb {
+    background: #4e5155; 
+    border-radius: 5px;
+    border: 3px solid var(--jb-bg); /* Margines scrollbara */
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #6e7175; 
 }
