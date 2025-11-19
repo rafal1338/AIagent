@@ -1,7 +1,6 @@
 # devteam_runner.py
-# Importujemy dodatkowo run_verifier_agent
-from coder_agent import run_coder_agent, run_verifier_agent
-from tools import write_code_file, read_project_spec, list_project_files
+from coder_agent import run_coder_agent, run_verifier_agent, run_code_reviewer
+from tools import write_code_file, list_project_files
 
 def parse_plan_to_steps(plan_content: str) -> list[str]:
     steps = []
@@ -13,87 +12,93 @@ def parse_plan_to_steps(plan_content: str) -> list[str]:
     return steps
 
 def run_devteam_pipeline(initial_task: str) -> str:
-    print(f"🚀 [DevTeam] Start: {initial_task}")
+    print(f"🚀 [DevTeam] Optymalizowany Start: {initial_task}")
     
-    # --- FAZA 1: PLANOWANIE ---
+    # --- FAZA 1: SZYBKIE PLANOWANIE ---
     print("🤖 [1/3] Planowanie...")
-    
     plan_prompt = (
-        f"Jesteś Tech Leadem. Zaplanuj zadanie: '{initial_task}'.\n"
-        "1. Zapisz 'PLAN_PROJEKTU.md'.\n"
-        "2. Wypisz 3-6 kroków.\n"
-        "3. Pierwszy krok: 'Inicjalizacja struktury'.\n"
-        "4. Kolejne kroki: Implementacja kolejnych modułów.\n"
-        "5. Ostatni krok: Integracja i weryfikacja."
+        f"Jesteś Tech Leadem. Stwórz listę 3-5 kroków technicznych dla zadania: '{initial_task}'.\n"
+        "Każdy krok w nowej linii. Bez wstępów. Krok 1: Struktura."
     )
+    # Limit tylko 15 kroków na planowanie - to ma być szybkie
+    agent_result = run_coder_agent(plan_prompt, max_steps=15)
     
-    agent_result = run_coder_agent(plan_prompt, max_steps=20)
+    # Parsujemy odpowiedź bezpośrednio (szybciej niż I/O pliku)
+    plan_text = agent_result.get('output', '')
+    steps = parse_plan_to_steps(plan_text)
     
-    # --- FAZA 2: ODCZYT PLANU ---
-    try:
-        plan_content = read_project_spec.invoke({"filepath": "PLAN_PROJEKTU.md"})
-        if "❌" in plan_content or not plan_content.strip():
-            # Fallback jeśli plik nie powstał
-            plan_content = agent_result.get('output', '')
-            write_code_file.invoke({"filepath": "PLAN_PROJEKTU.md", "content": plan_content})
+    if not steps:
+        print("⚠️ Fallback planowania.")
+        steps = [f"Zrealizuj zadanie: {initial_task}"]
+    else:
+        # Zapisujemy plan dla potomności (asynchronicznie w logice)
+        try:
+            write_code_file.invoke({"filepath": "PLAN_PROJEKTU.md", "content": plan_text})
+        except: pass
 
-        steps = parse_plan_to_steps(plan_content)
-        if not steps: steps = [initial_task]
-        print(f"📋 [Plan] Kroki: {len(steps)}")
-        
-    except Exception:
-        steps = [initial_task]
+    print(f"📋 [Plan] {len(steps)} kroków.")
 
-    # --- FAZA 3: INTELIGENTNA EGZEKUCJA ---
+    # --- FAZA 2: EGZEKUCJA Z BEZPIECZNIKIEM ---
     print("🤖 [2/3] Realizacja...")
     execution_log = ""
     
     for i, step in enumerate(steps, 1):
-        # 1. Pobieramy aktualny stan projektu
         try:
-            current_structure = list_project_files.invoke({})
+            structure = list_project_files.invoke({})
         except:
-            current_structure = "(pusty folder)"
+            structure = "..."
             
-        print(f"\n👉 Krok {i}/{len(steps)} (Oryginał): {step}")
+        print(f"\n👉 Krok {i}: {step}")
         
-        # 2. WERYFIKACJA: Czy ten krok ma sens w kontekście istniejących plików?
-        # To tutaj zapobiegamy duplikatom "backend" vs "backend_v2"
-        verified_step = run_verifier_agent(step, current_structure)
+        # 1. Weryfikacja (Szybka)
+        task = run_verifier_agent(step, structure)
         
-        # 3. EGZEKUCJA: Coder dostaje już poprawione, bezpieczne zadanie
-        step_task = (
-            f"WYKONAJ ZADANIE: {verified_step}\n"
-            f"KONTEKST CAŁEGO PROJEKTU: {initial_task}\n"
-            f"OBECNE PLIKI:\n{current_structure}\n\n"
-            "Pamiętaj: Edytuj istniejące pliki, nie twórz duplikatów."
-        )
+        # Pętla poprawkowa (Max 2 - optymalizacja czasu)
+        max_retries = 2
+        retry = 0
+        done = False
         
-        result = run_coder_agent(step_task, max_steps=60)
-        output = result.get('output', 'Zrobione.')
-        
-        execution_log += f"### Krok {i}: {step}\n*Status weryfikacji:* Zadanie zoptymalizowane.\n\n{output}\n\n"
+        while not done and retry <= max_retries:
+            if retry > 0: print(f"   🔄 Poprawka {retry}...")
+            
+            full_task = f"ZADANIE: {task}\nKONTEKST: {initial_task}\nPLIKI:\n{structure}"
+            
+            # 2. Coder (Główna praca)
+            res = run_coder_agent(full_task, max_steps=50)
+            out = res.get('output', '')
+            
+            # 3. Review (Szybki)
+            # Pobieramy strukturę tylko jeśli review jest włączone
+            new_struct = list_project_files.invoke({})
+            review = run_code_reviewer(task, out, new_struct)
+            
+            if "APPROVED" in review:
+                print("   ✅ Zatwierdzono")
+                execution_log += f"#### Krok {i}: {step}\n{out}\n\n"
+                done = True
+            else:
+                print(f"   🛑 Poprawki: {review[:40]}...")
+                task = f"POPRAW KOD WEDŁUG UWAG: {review}\nKod musi być kompletny."
+                retry += 1
+                if retry > max_retries:
+                    print("   ⚠️ Wymuszone przejście dalej.")
+                    execution_log += f"#### Krok {i} (Warunkowo): {step}\n{out}\n\n"
+                    done = True
 
-    # --- FAZA 4: RAPORT ---
+    # --- FAZA 3: RAPORT ---
     try:
-        final_structure = list_project_files.invoke({})
+        final_files = list_project_files.invoke({})
     except:
-        final_structure = "Błąd odczytu."
+        final_files = "Błąd."
 
     return f"""
-    # 🚀 Raport DevTeam (Smart Optimizer)
+    # 🚀 Raport DevTeam
+    ## Zadanie: {initial_task}
     
-    ## 🎯 Zadanie
-    {initial_task}
-    
-    ## 🧠 Optymalizacja
-    Zastosowano Agenta Weryfikatora do sprawdzania spójności plików przed każdym krokiem.
-    
-    ## 📂 Finalna Struktura
+    ## 📂 Pliki
     ```text
-    {final_structure}
+    {final_files}
     ```
-    
-    ## 📝 Przebieg
+    ## 📝 Szczegóły
     {execution_log}
     """
