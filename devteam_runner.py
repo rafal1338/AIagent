@@ -1,83 +1,118 @@
 # devteam_runner.py
 from coder_agent import run_coder_agent
-# Importujemy narzędzia do sprawdzania plików
-from tools import write_code_file, list_project_files, read_project_spec
+from tools import write_code_file, read_project_spec, list_project_files
+
+def parse_plan_to_steps(plan_content: str) -> list[str]:
+    """
+    Pomocnicza funkcja, która wyciąga konkretne kroki z pliku tekstowego.
+    """
+    steps = []
+    for line in plan_content.split('\n'):
+        line = line.strip()
+        # Filtrujemy puste linie, nagłówki markdown i "rozmówki" agenta
+        if line and not line.startswith('#') and len(line) > 5:
+            # Usuwamy numerację (np. "1. Stwórz..." -> "Stwórz...")
+            cleaned_line = line.lstrip('0123456789.-*• ')
+            steps.append(cleaned_line)
+    return steps
 
 def run_devteam_pipeline(initial_task: str) -> str:
     """
-    Orkiestrator z pętlą weryfikacji (Self-Correction Loop).
+    Orkiestrator z podziałem zadań i zabezpieczeniem przed leniwym agentem.
     """
     
-    # --- KROK 1: Specyfikacja ---
-    print("🤖 [DevTeam] Analiza wymagań...")
-    spec_content = f"""
-    # Specyfikacja
-    Zadanie: {initial_task}
-    Cel: Stworzyć działający kod.
-    Wymagane: Kompletna struktura plików.
-    """
-    write_code_file.invoke({"filepath": "SPECYFIKACJA.md", "content": spec_content})
+    print(f"🚀 [DevTeam] Rozpoczynam projekt: {initial_task}")
     
-    # --- KROK 2: Pętla Realizacji (Max 3 próby) ---
-    max_attempts = 3
-    attempt = 1
-    success = False
-    coder_output = ""
+    # --- FAZA 1: ANALIZA I PLANOWANIE ---
+    print("🤖 [Faza 1/3] Tworzenie planu implementacji...")
     
-    # Definiujemy główny cel (zakładamy, że agent powinien stworzyć cokolwiek w folderze)
-    current_task = (
-        f"Zrealizuj zadanie: {initial_task}. "
-        "Stwórz wszystkie niezbędne pliki w folderze 'program'. "
-        "Upewnij się, że kod jest kompletny."
+    plan_prompt = (
+        f"Jesteś Tech Leadem. Twoim zadaniem jest rozpisanie planu dla programisty dla zadania: '{initial_task}'.\n"
+        "1. UŻYJ narzędzia 'write_code_file', aby zapisać plik 'PLAN_PROJEKTU.md'.\n"
+        "2. W tym pliku wypisz od 3 do 6 konkretnych kroków implementacji.\n"
+        "3. Każdy krok w nowej linii.\n"
+        "4. Pierwszym krokiem MUSI BYĆ: 'Stwórz strukturę plików i podstawową konfigurację'."
     )
-
-    while attempt <= max_attempts:
-        print(f"🤖 [DevTeam] Próba {attempt}/{max_attempts}...")
-        
-        # Uruchamiamy agenta (z dużym limitem kroków)
-        result_dict = run_coder_agent(current_task, max_steps=100)
-        coder_output = result_dict.get('output', '')
-        
-        # --- KROK 3: Weryfikacja ---
-        print("🤖 [DevTeam] Weryfikacja efektów pracy...")
-        
-        # Sprawdzamy strukturę plików
-        files_list = list_project_files.invoke({})
-        
-        # Prosta heurystyka: Czy powstały jakieś pliki poza specyfikacją?
-        # (Możesz to rozbudować o sprawdzanie konkretnego pliku np. main.py)
-        if "📄" in files_list and ("main" in files_list or "app" in files_list or "index" in files_list):
-            print("✅ [DevTeam] Wygląda na to, że projekt został utworzony.")
-            success = True
-            break
-        else:
-            print("⚠️ [DevTeam] Nie znaleziono głównych plików kodu. Zlecam poprawkę.")
-            current_task = (
-                f"Poprzednia próba nie powiodła się lub brakuje kluczowych plików. "
-                f"Obecna struktura to:\n{files_list}\n"
-                f"Twoim zadaniem jest STWORZYĆ brakujące pliki kodu dla zadania: {initial_task}."
-            )
-            attempt += 1
-
-    # --- KROK 4: Raport ---
-    status_icon = "✅" if success else "⚠️"
     
+    # Pobieramy wynik, żeby mieć dostęp do tekstu odpowiedzi w razie błędu
+    agent_result = run_coder_agent(plan_prompt, max_steps=20)
+    
+    # --- FAZA 2: ODCZYT PLANU (Z NAPRAWĄ) ---
+    try:
+        # Próba 1: Odczyt z pliku (Idealny scenariusz)
+        plan_content = read_project_spec.invoke({"filepath": "PLAN_PROJEKTU.md"})
+        
+        # Jeśli plik nie istnieje (Agent tylko "powiedział" plan, ale nie zapisał)
+        if "❌" in plan_content or not plan_content.strip():
+            print("⚠️ [Autokorekta] Agent nie utworzył pliku, ale mógł podać plan w tekście. Próbuję odzyskać...")
+            
+            agent_text_output = agent_result.get('output', '')
+            if len(agent_text_output) > 10:
+                # Używamy odpowiedzi agenta jako treści planu
+                plan_content = agent_text_output
+                # Zapisujemy go ręcznie dla porządku
+                write_code_file.invoke({"filepath": "PLAN_PROJEKTU.md", "content": plan_content})
+                print("✅ [Autokorekta] Plan odzyskany z rozmowy i zapisany.")
+            else:
+                raise Exception("Brak pliku i brak sensownej odpowiedzi od Agenta.")
+
+        steps = parse_plan_to_steps(plan_content)
+        
+        if not steps:
+             print("⚠️ Pusty plan. Dodaję domyślny krok.")
+             steps = ["Stwórz strukturę projektu i główny kod aplikacji"]
+             
+        print(f"📋 [Plan] Zatwierdzono {len(steps)} kroków.")
+        
+    except Exception as e:
+        print(f"⚠️ Błąd krytyczny planowania: {e}. Przechodzę do trybu awaryjnego.")
+        steps = [initial_task]
+
+    # --- FAZA 3: EGZEKUCJA KROK PO KROKU ---
+    print("🤖 [Faza 2/3] Wykonywanie...", end="", flush=True)
+    
+    execution_log = ""
+    
+    for i, step in enumerate(steps, 1):
+        print(f"\n   👉 Krok {i}: {step}")
+        
+        step_task = (
+            f"ZREALIZUJ KROK {i}: '{step}'.\n"
+            f"Kontekst projektu: {initial_task}\n"
+            "WYMAGANIA:\n"
+            "- Używaj 'write_code_file' do tworzenia/edycji plików.\n"
+            "- Jeśli kod jest długi, podziel go na mniejsze pliki.\n"
+            "- ZAWSZE zapisuj efekt pracy na dysku."
+        )
+        
+        result = run_coder_agent(step_task, max_steps=50)
+        output = result.get('output', 'Zadanie wykonane.')
+        execution_log += f"### Krok {i}: {step}\n{output}\n\n"
+
+    # --- FAZA 4: RAPORT ---
+    print("\n🤖 [Faza 3/3] Raportowanie...")
+    
+    try:
+        project_structure = list_project_files.invoke({})
+    except Exception:
+        project_structure = "Błąd listowania plików."
+
     final_report = f"""
-    # {status_icon} Raport DevTeam (Po {attempt} iteracjach)
+    # 🚀 Raport DevTeam
     
     ## 🎯 Zadanie
     {initial_task}
     
-    ## 📂 Struktura Projektu
+    ## 📋 Wykonane Kroki
+    {chr(10).join([f"- {s}" for s in steps])}
+    
+    ## 📂 Pliki w projekcie
     ```text
-    {files_list}
+    {project_structure}
     ```
     
-    ## 💬 Ostatni Komentarz Agenta
-    {coder_output}
-    
-    ---
-    *System wykonał {attempt} pętle(i) weryfikacji.*
+    ## 📝 Szczegóły
+    {execution_log}
     """
     
     return final_report
