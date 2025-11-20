@@ -1,6 +1,6 @@
 # devteam_runner.py
 from coder_agent import run_coder_agent, run_verifier_agent
-from tools import write_code_file, list_project_files, read_project_spec
+from tools import write_code_file, list_project_files, read_project_spec, system_log
 
 def parse_plan_to_steps(plan_content: str) -> list[str]:
     steps = []
@@ -12,70 +12,60 @@ def parse_plan_to_steps(plan_content: str) -> list[str]:
     return steps
 
 def run_devteam_pipeline(initial_task: str) -> str:
-    print(f"🚀 [DevTeam] Start Szybki: {initial_task}")
+    system_log(f"🎬 START PROJEKTU: {initial_task}")
     
-    # --- FAZA 1: PRECYZYJNE PLANOWANIE ---
-    print("🤖 [1/3] Planowanie struktury...")
+    # --- FAZA 1: PLANOWANIE ---
+    system_log("🤖 [1/3] Planowanie struktury...")
     
-    # Kluczowa zmiana: Wymuszamy na Szefie podawanie nazw plików w planie
     plan_prompt = (
         f"Jesteś Tech Leadem. Stwórz plan dla zadania: '{initial_task}'.\n"
-        "WYMAGANIA KRYTYCZNE:\n"
-        "1. W każdym kroku MUSISZ podać nazwę pliku, na którym programista ma pracować.\n"
-        "2. Przykład dobrego kroku: 'Stwórz logikę kalkulatora w pliku calc.py'.\n"
-        "3. Przykład złego kroku: 'Napisz logikę'.\n"
-        "4. Ogranicz się do 3-5 kroków.\n"
-        "5. Nie używaj wstępów, tylko lista kroków."
+        "WYMAGANIA: Podaj 3-5 kroków. W każdym kroku podaj NAZWĘ PLIKU do edycji/utworzenia.\n"
+        "Bez wstępów."
     )
     
-    # Szybki strzał do modelu (max 15 kroków)
     agent_result = run_coder_agent(plan_prompt, max_steps=15)
     plan_text = agent_result.get('output', '')
     
-    # Zapisujemy plan dla porządku
     try:
         write_code_file.invoke({"filepath": "PLAN_PROJEKTU.md", "content": plan_text})
     except: pass
 
     steps = parse_plan_to_steps(plan_text)
     if not steps:
-        print("⚠️ Fallback: Brak planu, wykonuję zadanie w całości.")
-        steps = [f"Wykonaj pełne zadanie: {initial_task} w pliku main.py"]
+        system_log("⚠️ Brak jasnego planu, przechodzę do trybu bezpośredniego.")
+        steps = [f"Wykonaj zadanie: {initial_task} w pliku main.py"]
 
-    print(f"📋 [Plan] {len(steps)} kroków.")
+    system_log(f"📋 Zatwierdzono {len(steps)} kroków realizacyjnych.")
 
-    # --- FAZA 2: SZYBKA REALIZACJA ---
-    print("🤖 [2/3] Kodowanie...")
+    # --- FAZA 2: REALIZACJA ---
+    system_log("🤖 [2/3] Rozpoczynam kodowanie...")
     execution_log = ""
     
     for i, step in enumerate(steps, 1):
-        # Szybkie sprawdzenie struktury (bez zbędnych folderów dzięki tools.py)
         try:
             structure = list_project_files.invoke({})
         except:
             structure = "..."
             
-        print(f"\n👉 Krok {i}: {step}")
+        system_log(f"👉 Krok {i}/{len(steps)}: {step}")
         
-        # 1. Weryfikator (Deduplikacja)
-        # Sprawdza, czy krok nie każe tworzyć duplikatu (np. main.py vs app.py)
+        # Weryfikacja
         safe_task = run_verifier_agent(step, structure)
         
-        # 2. Coder (Wykonanie)
-        # Dajemy mu kontekst struktury, żeby wiedział co ma importować
+        # Wykonanie
         full_task = (
             f"ZADANIE: {safe_task}\n"
-            f"KONTEKST PROJEKTU (Istniejące pliki):\n{structure}\n"
-            "WYMAGANIE: Jeśli plik istnieje, edytuj go. Nie twórz nowych plików o podobnych nazwach."
+            f"KONTEKST (PLIKI): {structure}\n"
+            "Zasada: Edytuj istniejące, nie duplikuj."
         )
         
-        # Uruchamiamy raz, porządnie. Bez pętli poprawkowej (dla szybkości).
         res = run_coder_agent(full_task, max_steps=50)
         out = res.get('output', 'Zrobione.')
         
         execution_log += f"#### Krok {i}: {step}\n{out}\n\n"
 
     # --- FAZA 3: RAPORT ---
+    system_log("🏁 [3/3] Generowanie raportu końcowego...")
     try:
         final_files = list_project_files.invoke({})
     except:

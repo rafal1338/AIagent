@@ -1,54 +1,315 @@
+<!-- templates/base_template.html -->
 <!DOCTYPE html>
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI DevTeam | JetBrains</title>
+    <title>AI DevTeam | IDE</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1><i class="fa-brands fa-python" style="color: #3574f0;"></i> AI DevTeam Agent</h1>
-            
-            <!-- Dodano klasę 'window-controls' i zmieniono ikonkę minimalizacji -->
-            <div class="window-controls">
-                <i class="fa-solid fa-minus" title="Minimize"></i>
-                <i class="fa-regular fa-square" title="Maximize"></i>
-                <i class="fa-solid fa-xmark close-btn" title="Close"></i>
+        
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fa-solid fa-layer-group"></i> Project Explorer
             </div>
-        </header>
-
-        <main>
-            <form method="POST" onsubmit="document.getElementById('loader').style.display='flex'">
-                <div class="form-group">
-                    <label for="task_input">Input Command</label>
-                    <textarea id="task_input" name="task_input" placeholder="# Describe your task here..." required autofocus>{{ task }}</textarea>
-                </div>
-                
-                <div class="action-bar">
-                    <button type="submit"><i class="fa-solid fa-play"></i> Run Configuration</button>
-                    
-                    <div id="loader" style="display: none; align-items: center; gap: 10px; color: var(--jb-text); font-size: 12px;">
-                        <span>Compiling...</span>
-                        <i class="fa-solid fa-circle-notch fa-spin" style="color: var(--jb-blue);"></i>
+            
+            <div class="sidebar-content">
+                <!-- Drzewo Plików -->
+                <div class="sb-section" style="flex-grow: 1; min-height: 150px; display:flex; flex-direction:column;">
+                    <h3>
+                        Files 
+                        <i class="fa-solid fa-rotate-right" style="cursor: pointer; font-size: 10px;" onclick="updateFileTree()" title="Refresh"></i>
+                    </h3>
+                    <div id="file-tree" class="file-tree">
+                        <div class="empty-tree">No files...</div>
                     </div>
                 </div>
-            </form>
 
-            {% if error %}
-                <div class="error"><i class="fa-solid fa-triangle-exclamation"></i> {{ error }}</div>
-            {% endif %}
-
-            {% if result %}
-                <div class="result-container">
-                    <div class="result-header"><i class="fa-solid fa-terminal"></i> Output</div>
-                    <div class="result">{{ result }}</div>
+                <!-- Status -->
+                <div class="sb-section">
+                    <h3>Status</h3>
+                    <div class="progress-container">
+                        <div id="progress-bar" class="progress-bar"></div>
+                    </div>
+                    <div id="status-text" class="status-text">Ready</div>
                 </div>
-            {% endif %}
-        </main>
+
+                <!-- Logi -->
+                <div class="sb-section" style="height: 200px; display: flex; flex-direction: column;">
+                    <h3>Console</h3>
+                    <div id="log-console" class="log-console">
+                        <div class="log-entry"><span class="log-msg" style="color: #808080;">Waiting...</span></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <div class="content-wrapper">
+            <header>
+                <h1><i class="fa-brands fa-python" style="color: #3574f0;"></i> AI DevTeam IDE</h1>
+                <div class="window-controls">
+                    <i class="fa-solid fa-minus"></i>
+                    <i class="fa-regular fa-square"></i>
+                    <i class="fa-solid fa-xmark close-btn"></i>
+                </div>
+            </header>
+
+            <main>
+                <!-- WIDOK 1: URUCHAMIANIE AGENTA -->
+                <div id="run-view">
+                    <form id="task-form">
+                        <div class="form-group">
+                            <label for="task_input">New Task / Command</label>
+                            <textarea id="task_input" name="task_input" placeholder="# Opisz zadanie dla DevTeamu..." required autofocus></textarea>
+                        </div>
+                        
+                        <div class="action-bar">
+                            <button type="submit" id="run-btn"><i class="fa-solid fa-play"></i> Run Agent</button>
+                        </div>
+                    </form>
+
+                    <div id="result-wrapper" class="result-container" style="display: none;">
+                        <div class="result-header"><i class="fa-solid fa-terminal"></i> Agent Output</div>
+                        <div id="result-content" class="result"></div>
+                    </div>
+                </div>
+
+                <!-- WIDOK 2: EDYTOR PLIKU (Domyślnie ukryty) -->
+                <div id="editor-view" style="display: none; flex-direction: column; height: 100%;">
+                    <div class="editor-header">
+                        <span id="current-filename"><i class="fa-regular fa-file"></i> unknown.py</span>
+                        <div class="editor-actions">
+                            <button onclick="saveFile()" class="btn-secondary"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+                            <button onclick="closeEditor()" class="btn-secondary"><i class="fa-solid fa-xmark"></i> Close</button>
+                        </div>
+                    </div>
+                    <textarea id="code-editor" spellcheck="false"></textarea>
+                </div>
+            </main>
+        </div>
     </div>
+
+    <script>
+        const form = document.getElementById('task-form');
+        const btn = document.getElementById('run-btn');
+        const consoleDiv = document.getElementById('log-console');
+        const resultWrapper = document.getElementById('result-wrapper');
+        const resultContent = document.getElementById('result-content');
+        const progressBar = document.getElementById('progress-bar');
+        const statusText = document.getElementById('status-text');
+        
+        // Elementy Edytora
+        const runView = document.getElementById('run-view');
+        const editorView = document.getElementById('editor-view');
+        const codeEditor = document.getElementById('code-editor');
+        const currentFilenameSpan = document.getElementById('current-filename');
+        let currentFilePath = null; // Przechowuje ścieżkę otwartego pliku
+
+        let treeInterval;
+        updateFileTree();
+
+        // --- OBSŁUGA AGENTA ---
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const task = document.getElementById('task_input').value;
+            
+            // Przełącz na widok uruchamiania, jeśli jesteśmy w edytorze
+            closeEditor();
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Running...';
+            consoleDiv.innerHTML = '';
+            resultWrapper.style.display = 'none';
+            progressBar.style.width = '5%';
+            statusText.innerText = "Starting...";
+            statusText.style.color = "#e2c08d";
+            
+            addLog("Initializing connection...");
+
+            try {
+                const response = await fetch('/run', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({task_input: task})
+                });
+                
+                if (!response.ok) throw new Error("Server busy or error");
+
+                startEventSource();
+                treeInterval = setInterval(updateFileTree, 3000);
+
+            } catch (err) {
+                addLog("Error: " + err.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-play"></i> Run Agent';
+            }
+        });
+
+        function startEventSource() {
+            const evtSource = new EventSource("/stream");
+            let buffer = "";
+            let isResult = false;
+
+            evtSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                const msg = data.msg;
+
+                if (msg === "__DONE__") {
+                    evtSource.close();
+                    finishJob();
+                    return;
+                }
+
+                if (msg.startsWith("__RESULT_START__")) {
+                    isResult = true;
+                    buffer = msg.replace("__RESULT_START__\n", "");
+                    return;
+                }
+                if (msg.includes("__RESULT_END__")) {
+                    isResult = false;
+                    buffer += msg.replace("\n__RESULT_END__", "");
+                    resultWrapper.style.display = 'flex';
+                    resultContent.innerText = buffer;
+                    buffer = "";
+                    return;
+                }
+                if (isResult) {
+                    buffer += msg + "\n";
+                    return;
+                }
+                if (msg.includes("💾") || msg.includes("Zapisano")) {
+                    updateFileTree();
+                }
+                addLog(msg);
+                animateProgress();
+            };
+            evtSource.onerror = function() {
+                evtSource.close();
+                finishJob();
+            };
+        }
+
+        // --- FUNKCJE EDYTORA PLIKÓW ---
+        
+        // Otwieranie pliku (kliknięcie w drzewko)
+        async function openFile(path) {
+            try {
+                addLog("Opening file: " + path);
+                const res = await fetch(`/get_file?path=${encodeURIComponent(path)}`);
+                if (!res.ok) throw new Error("Could not read file");
+                
+                const content = await res.text();
+                
+                // UI Update
+                runView.style.display = 'none';
+                editorView.style.display = 'flex';
+                
+                codeEditor.value = content;
+                currentFilenameSpan.innerHTML = `<i class="fa-regular fa-file-code"></i> ${path}`;
+                currentFilePath = path;
+                
+            } catch (e) {
+                addLog("Error opening file: " + e.message);
+            }
+        }
+
+        // Zapisywanie pliku
+        async function saveFile() {
+            if (!currentFilePath) return;
+            
+            const content = codeEditor.value;
+            addLog("Saving " + currentFilePath + "...");
+            
+            try {
+                const res = await fetch('/save_file', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({path: currentFilePath, content: content})
+                });
+                
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    addLog("File saved successfully.");
+                } else {
+                    addLog("Error saving file: " + data.message);
+                }
+            } catch (e) {
+                addLog("Network error while saving.");
+            }
+        }
+
+        // Zamykanie edytora (powrót do widoku Run)
+        function closeEditor() {
+            editorView.style.display = 'none';
+            runView.style.display = 'block';
+            currentFilePath = null;
+        }
+
+        // --- FUNKCJE POMOCNICZE ---
+
+        function addLog(text) {
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            let color = "#bcbec4";
+            if (text.includes("Error") || text.includes("❌")) color = "#cf514e";
+            if (text.includes("✅")) color = "#57965c";
+            div.innerHTML = `<span class="log-time">${time}</span> <span class="log-msg" style="color:${color}">${text}</span>`;
+            consoleDiv.appendChild(div);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        function animateProgress() {
+            let cw = parseFloat(progressBar.style.width) || 0;
+            if (cw < 90) progressBar.style.width = (cw + 2) + '%';
+        }
+
+        function finishJob() {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-play"></i> Run Agent';
+            progressBar.style.width = '100%';
+            progressBar.style.backgroundColor = '#57965c';
+            statusText.innerText = "Done";
+            statusText.style.color = "#57965c";
+            clearInterval(treeInterval);
+            updateFileTree();
+        }
+
+        async function updateFileTree() {
+            try {
+                const res = await fetch('/files');
+                const data = await res.json();
+                document.getElementById('file-tree').innerHTML = renderTree(data);
+            } catch(e) { console.error(e); }
+        }
+
+        function renderTree(items) {
+            if (!items || items.length === 0) return '<div class="empty-tree">Empty</div>';
+            let html = '<ul>';
+            items.forEach(item => {
+                if (item.type === 'folder') {
+                    html += `<li>
+                        <div class="tree-item"><i class="fa-regular fa-folder"></i> ${item.name}</div>
+                        ${renderTree(item.children)}
+                    </li>`;
+                } else {
+                    // Dodajemy onclick=openFile(...)
+                    html += `<li>
+                        <div class="tree-item file-link" onclick="openFile('${item.path}')">
+                            <i class="fa-regular fa-file-code"></i> ${item.name}
+                        </div>
+                    </li>`;
+                }
+            });
+            html += '</ul>';
+            return html;
+        }
+    </script>
 </body>
 </html>
