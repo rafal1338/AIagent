@@ -38,31 +38,40 @@ def save_project_map(data):
     except: pass
 
 def get_project_knowledge_base():
-    """Generuje czytelny opis struktury dla Agenta"""
+    """
+    Generuje BOGATY opis struktury dla Agenta.
+    To jest kluczowe, żeby agent nie tworzył duplikatów.
+    """
     data = load_project_map()
     if not data:
-        return "(Brak mapy projektu - projekt jest pusty)"
+        return "(PROJEKT JEST PUSTY)"
     
-    report = "🗺️ MAPA PROJEKTU (Istniejące pliki i ich role):\n"
+    report = "🧠 WIEDZA O PROJEKCIE (Istniejące moduły):\n"
     for path, info in data.items():
         desc = info.get('description', 'Brak opisu')
-        report += f"- {path}: {desc}\n"
+        report += f"📄 PLIK: {path}\n   Opis: {desc}\n"
+    
+    report += "\nZASADA: Jeśli musisz zmienić logikę opisaną powyżej, EDYTUJ ten plik. NIE TWORZ NOWEGO."
     return report
 
 # --- NARZĘDZIA ---
 
 @tool
-def write_code_file(filepath: str, content: str, description: str = "Kod źródłowy") -> str:
+def write_code_file(filepath: str, content: str, description: str) -> str:
     """
-    Zapisuje kod do pliku ORAZ aktualizuje mapę projektu.
+    Zapisuje kompletny kod do pliku. WYMAGA PODANIA OPISU (description).
+    
     Args:
-        filepath: ścieżka (np. 'src/main.py')
-        content: treść pliku
-        description: KRÓTKI opis, za co ten plik odpowiada (np. 'Logika logowania', 'Główny widok HTML'). TO JEST WAŻNE DLA UNIKANIA DUPLIKATÓW.
+        filepath: ścieżka (np. 'src/auth_service.py')
+        content: PEŁNY, działający kod (bez skrótów).
+        description: Co ten kod robi? (np. "Logika logowania i rejestracji użytkowników").
     """
     full_path = os.path.join(PROJECT_DIR, filepath)
     directory = os.path.dirname(full_path)
     
+    if not description or len(description) < 5:
+        return "❌ BŁĄD: Musisz podać sensowny opis pliku w parametrze 'description', aby zaktualizować mapę projektu."
+
     try:
         if directory and not os.path.exists(directory):
             os.makedirs(directory, exist_ok=True)
@@ -70,23 +79,23 @@ def write_code_file(filepath: str, content: str, description: str = "Kod źród�
         with open(full_path, "w", encoding="utf-8") as f:
             f.write(content)
         
-        # Aktualizacja mapy
+        # Aktualizacja mapy wiedzy
         current_map = load_project_map()
         current_map[filepath] = {
             "description": description,
-            "type": filepath.split('.')[-1] if '.' in filepath else 'unknown'
+            "last_modified": "Teraz"
         }
         save_project_map(current_map)
         
-        system_log(f"💾 Zapisano: {filepath} ({description})")
-        return f"✅ Zapisano i zindeksowano: {filepath}"
+        system_log(f"💾 Zapisano: {filepath}")
+        return f"✅ Sukces. Plik '{filepath}' został zapisany i zindeksowany w mapie projektu."
     except Exception as e:
         system_log(f"❌ Błąd zapisu {filepath}: {e}")
         return f"❌ Błąd zapisu: {e}"
 
 @tool
 def read_project_spec(filepath: str) -> str:
-    """Odczytuje plik."""
+    """Odczytuje treść pliku."""
     full_path = os.path.join(PROJECT_DIR, filepath)
     try:
         with open(full_path, "r", encoding="utf-8") as f:
@@ -98,12 +107,7 @@ def read_project_spec(filepath: str) -> str:
 
 @tool
 def list_project_files() -> str:
-    """
-    Zwraca strukturę plików.
-    Dla Agenta lepiej używać get_project_knowledge_base (które jest wewnętrzne), 
-    ale to narzędzie zostawiamy dla kompatybilności.
-    """
-    # Zwracamy mapę wiedzy zamiast surowej listy, bo jest bardziej wartościowa
+    """Zwraca mapę wiedzy (zamiast surowej listy)."""
     return get_project_knowledge_base()
 
 coder_tools = [write_code_file, read_project_spec, list_project_files]

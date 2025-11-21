@@ -1,6 +1,5 @@
 # devteam_runner.py
 from coder_agent import run_coder_agent, run_verifier_agent
-# Importujemy nową funkcję wiedzy
 from tools import write_code_file, list_project_files, read_project_spec, system_log, get_project_knowledge_base
 
 def parse_plan_to_steps(plan_content: str) -> list[str]:
@@ -13,77 +12,74 @@ def parse_plan_to_steps(plan_content: str) -> list[str]:
     return steps
 
 def run_devteam_pipeline(initial_task: str) -> str:
-    system_log(f"🎬 START: {initial_task}")
+    system_log(f"🎬 START (Tryb Jakości): {initial_task}")
     
-    # --- 1. PLANOWANIE ---
-    system_log("🤖 [1/3] Generowanie planu...")
+    # --- 1. ANALIZA STANU ISTNIEJĄCEGO ---
+    knowledge = get_project_knowledge_base()
+    system_log("🔍 Analiza mapy projektu...")
     
-    # Pobieramy mapę, żeby planista wiedział co już jest (przy kontynuacji pracy)
-    existing_knowledge = get_project_knowledge_base()
-    
+    # --- 2. PLANOWANIE ---
     plan_prompt = (
-        f"Jesteś Tech Leadem. Zadanie: '{initial_task}'.\n"
-        f"OBECNY STAN PROJEKTU:\n{existing_knowledge}\n"
-        "WYMAGANIA:\n"
-        "1. Stwórz 3-5 konkretnych kroków.\n"
-        "2. W każdym kroku podaj nazwę pliku.\n"
-        "3. Jeśli plik już istnieje w mapie, użyj go.\n"
-        "4. Podaj tylko listę kroków."
+        f"Jesteś Tech Leadem. Zadanie: '{initial_task}'.\n\n"
+        f"OBECNA MAPA PROJEKTU:\n{knowledge}\n\n"
+        "WYTYCZNE:\n"
+        "1. Jeśli projekt jest pusty, zaplanuj strukturę od zera.\n"
+        "2. Jeśli pliki istnieją, zaplanuj ich EDYCJĘ.\n"
+        "3. Stwórz 3-5 kroków. W każdym kroku wskaż KONKRETNY PLIK.\n"
+        "4. Nie twórz duplikatów funkcjonalności.\n"
     )
     
     agent_result = run_coder_agent(plan_prompt, max_steps=15)
     plan_text = agent_result.get('output', '')
     
-    # Zapis planu (opcjonalne)
-    try: write_code_file.invoke({"filepath": "PLAN_PROJEKTU.md", "content": plan_text, "description": "Aktualny plan prac"})
+    try: write_code_file.invoke({"filepath": "PLAN_PROJEKTU.md", "content": plan_text, "description": "Plan działania"})
     except: pass
 
     steps = parse_plan_to_steps(plan_text)
-    if not steps:
-        steps = [f"Zrealizuj: {initial_task}"]
+    if not steps: steps = [f"Zrealizuj: {initial_task}"]
 
-    system_log(f"📋 Plan: {len(steps)} kroków.")
+    system_log(f"📋 Plan działania: {len(steps)} kroków.")
 
-    # --- 2. REALIZACJA ---
-    system_log("🤖 [2/3] Kodowanie z Mapą Wiedzy...")
+    # --- 3. REALIZACJA ---
     execution_log = ""
     
     for i, step in enumerate(steps, 1):
-        # Pobieramy aktualną mapę wiedzy (z opisami plików!)
-        knowledge = get_project_knowledge_base()
+        # Zawsze pobieramy najświeższą wiedzę o projekcie
+        current_knowledge = get_project_knowledge_base()
             
         system_log(f"👉 Krok {i}: {step}")
         
-        # Weryfikacja z użyciem mapy
-        safe_task = run_verifier_agent(step, knowledge)
+        # Weryfikacja (czy krok ma sens w świetle mapy?)
+        verified_task = run_verifier_agent(step, current_knowledge)
+        
+        if verified_task != step:
+            system_log(f"💡 Korekta: {verified_task[:50]}...")
         
         # Zadanie dla Codera
         full_task = (
-            f"ZADANIE: {safe_task}\n"
-            f"{knowledge}\n" # Wklejamy mapę
-            "ZASADA: Nie duplikuj funkcjonalności. Jeśli plik ma opis pasujący do zadania, edytuj go. Pamiętaj o dodaniu opisu 'description' przy zapisie."
+            f"ZADANIE PRIORYTETOWE: {verified_task}\n\n"
+            f"{current_knowledge}\n"
+            "WYMAGANIA:\n"
+            "- Pisz kod najwyższej jakości.\n"
+            "- Kod musi być kompletny.\n"
+            "- Użyj 'write_code_file' z poprawnym opisem 'description'."
         )
         
         res = run_coder_agent(full_task, max_steps=50)
         out = res.get('output', 'Zrobione.')
         
-        execution_log += f"#### Krok {i}: {step}\n{out}\n\n"
+        execution_log += f"#### Krok {i}\n**Zadanie:** {verified_task}\n\n{out}\n\n"
 
-    # --- 3. RAPORT ---
-    system_log("🏁 [3/3] Raport...")
-    try:
-        # Raportujemy na podstawie inteligentnej mapy
-        final_structure = get_project_knowledge_base()
-    except:
-        final_structure = "Błąd odczytu mapy."
+    # --- 4. RAPORT ---
+    final_map = get_project_knowledge_base()
 
     return f"""
     # 🚀 Raport DevTeam
     ## Zadanie: {initial_task}
     
-    ## 🗺️ Mapa Projektu
+    ## 🗺️ Stan Projektu (Mapa)
     ```text
-    {final_structure}
+    {final_map}
     ```
     ## 📝 Szczegóły
     {execution_log}
