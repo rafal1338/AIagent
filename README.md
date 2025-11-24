@@ -33,7 +33,7 @@ graph TD
     subgraph AgentEnv ["🤖 Środowisko Agenta (coder_agent.py)"]
         direction TB
         Coder[👨‍💻 Senior Coder Agent]:::agent
-        Ollama[[🦙 Ollama: qwen2-coder]]:::external
+        Ollama[[🦙 Ollama: qwen3-coder]]:::external
     end
     
     subgraph ToolsSystem ["🛠️ System Plików i Narzędzia (tools.py)"]
