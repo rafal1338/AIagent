@@ -10,32 +10,60 @@
 ## 💡 Diagram Architektury Mermaid
 ```mermaid
 graph TD
-    User([Użytkownik]) -->|Zadanie| UI[Interfejs WWW / Flask]
-    UI -->|POST /run| App[app.py - Wątek w tle]
+    %% --- Style ---
+    classDef actor fill:#ffcc80,stroke:#333,stroke-width:2px,color:#000;
+    classDef ui fill:#b3e5fc,stroke:#0277bd,stroke-width:2px,color:#000;
+    classDef logic fill:#fff9c4,stroke:#fbc02d,stroke-width:2px,color:#000;
+    classDef storage fill:#e0f2f1,stroke:#00695c,stroke-width:2px,stroke-dasharray: 5 5,color:#000;
+    classDef agent fill:#e1bee7,stroke:#7b1fa2,stroke-width:2px,color:#000;
+    classDef external fill:#ffab91,stroke:#d84315,stroke-width:2px,color:#000;
+
+    %% --- Węzły ---
+    User([👤 Użytkownik]):::actor
+    UI[🖥️ Interfejs WWW / Flask]:::ui
+    App[⚙️ app.py - Wątek w tle]:::logic
     
-    subgraph "Orkiestrator (devteam_runner.py)"
-        App -->|Start| Planner{Planowanie}
-        Planner -->|Analiza Mapy| KB[(project_map.json)]
-        Planner -->|Generacja JSON| Steps[Lista Kroków]
-        
-        Steps -->|Pętla Wykonawcza| Loop[Dla każdego kroku...]
+    subgraph Orchestrator ["🧠 Orkiestrator (devteam_runner.py)"]
+        direction TB
+        Planner{📋 Planowanie}:::logic
+        Steps[📝 Lista Kroków]:::logic
+        Loop[🔄 Pętla Wykonawcza]:::logic
     end
     
-    subgraph "Agent Wykonawczy (coder_agent.py)"
-        Loop -->|Kontekst + Zadanie| Coder[Senior Coder Agent]
-        Coder -->|LLM Inference| Ollama[[Ollama: qwen3-coder]]
-        
-        Coder -->|Decyzja| Tools
+    subgraph AgentEnv ["🤖 Środowisko Agenta (coder_agent.py)"]
+        direction TB
+        Coder[👨‍💻 Senior Coder Agent]:::agent
+        Ollama[[🦙 Ollama: qwen2-coder]]:::external
     end
     
-    subgraph "System Plików i Narzędzia (tools.py)"
-        Tools -->|write_code_file| FS[System Plików /program]
-        Tools -->|Aktualizacja| KB
-        Tools -->|Sygnał SSE| LogStream[Strumień Logów]
+    subgraph ToolsSystem ["🛠️ System Plików i Narzędzia (tools.py)"]
+        direction TB
+        Tools[🧰 Narzędzia LangChain]:::logic
+        FS[📂 System Plików /program]:::storage
+        KB[(🗄️ project_map.json)]:::storage
+        LogStream[📡 Strumień Logów]:::ui
     end
+
+    %% --- Połączenia ---
+    User -->|Zadanie| UI
+    UI -->|POST /run| App
+    App -->|Start| Planner
     
-    LogStream -->|Server-Sent Events| UI
-    FS -->|Odczyt Drzewa| UI
+    Planner -->|Analiza Mapy| KB
+    Planner -->|Generacja JSON| Steps
+    Steps -->|Dla każdego kroku| Loop
+    
+    Loop -->|Kontekst + Zadanie| Coder
+    Coder <-->|Inference| Ollama
+    
+    Coder -->|Decyzja/Wywołanie| Tools
+    
+    Tools -->|Zapis Pliku| FS
+    Tools -->|Aktualizacja Mapy| KB
+    Tools -->|Sygnał SSE| LogStream
+    
+    LogStream -.->|Server-Sent Events| UI
+    FS -.->|Odczyt Drzewa| UI
 
 ```
 </details>
