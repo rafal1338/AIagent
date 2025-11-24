@@ -23,7 +23,7 @@ graph TD
     
     subgraph "Agent Wykonawczy (coder_agent.py)"
         Loop -->|Kontekst + Zadanie| Coder[Senior Coder Agent]
-        Coder -->|LLM Inference| Ollama[[Ollama: qwen2-coder]]
+        Coder -->|LLM Inference| Ollama[[Ollama: qwen3-coder]]
         
         Coder -->|Decyzja| Tools
     end
