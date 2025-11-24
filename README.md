@@ -10,56 +10,32 @@
 ## 💡 Diagram Architektury Mermaid
 ```mermaid
 graph TD
-    %% Definicja Stylów
-    classDef llm fill:#e0f7fa,stroke:#00bcd4,stroke-width:2px;
-    classDef db fill:#fff3e0,stroke:#ff9800,stroke-width:2px;
-    classDef agent fill:#e8f5f5,stroke:#4caf50,stroke-width:2px;
-    classDef tool fill:#f3e5f5,stroke:#9c27b0,stroke-width:1px;
-    classDef io fill:#fbe9e7,stroke:#ff5722,stroke-width:2px;
-
-    %% Węzły
-    subgraph Core Technologies
-        O[Ollama LLMs]:::llm
-        C(ChromaDB\nPamięć Długoterminowa):::db
-        FS[System Plików]:::io
+    User([Użytkownik]) -->|Zadanie| UI[Interfejs WWW / Flask]
+    UI -->|POST /run| App[app.py - Wątek w tle]
+    
+    subgraph "Orkiestrator (devteam_runner.py)"
+        App -->|Start| Planner{Planowanie}
+        Planner -->|Analiza Mapy| KB[(project_map.json)]
+        Planner -->|Generacja JSON| Steps[Lista Kroków]
+        
+        Steps -->|Pętla Wykonawcza| Loop[Dla każdego kroku...]
     end
-
-    subgraph LangChain Agents
-        PM(1. PM - Project Manager):::agent
-        ARC(2. Architect/Designer):::agent
-        COD(3. Programista/Coder):::agent
-        DOC(4. Dokumentalista):::agent
-        QA(5. Tester/QA):::agent
+    
+    subgraph "Agent Wykonawczy (coder_agent.py)"
+        Loop -->|Kontekst + Zadanie| Coder[Senior Coder Agent]
+        Coder -->|LLM Inference| Ollama[[Ollama: qwen2-coder]]
+        
+        Coder -->|Decyzja| Tools
     end
-
-    subgraph LangChain Tools
-        FT[FileManagementTool]:::tool
+    
+    subgraph "System Plików i Narzędzia (tools.py)"
+        Tools -->|write_code_file| FS[System Plików /program]
+        Tools -->|Aktualizacja| KB
+        Tools -->|Sygnał SSE| LogStream[Strumień Logów]
     end
-
-    %% Połączenia Komunikacji (LLM)
-    O --- PM
-    O --- ARC
-    O --- COD
-    O --- DOC
-    O --- QA
-
-    %% Połączenia RAG (Pamięć)
-    PM -->|Zapisuje: Plan| C
-    C -->|Pobiera: Plan| ARC
-    ARC -->|Zapisuje: Specyfikacja| C
-    C -->|Pobiera: Specyfikacja/Kod| COD
-    COD -->|Zapisuje: Wygenerowany Kod| C
-    C -->|Pobiera: Wszystko| DOC
-    QA -->|Zapisuje: Raporty Błędów| C
-
-    %% Połączenia Narzędzia (I/O)
-    PM -->|`create_directory`| FT
-    ARC -->|`create_directory` / `write_file`| FT
-    COD -->|`write_file`| FT
-    QA -->|`read_file` / `write_file`| FT
-    DOC -->|`read_file` / `write_file`| FT
-
-    FT --> FS
+    
+    LogStream -->|Server-Sent Events| UI
+    FS -->|Odczyt Drzewa| UI
 
 ```
 </details>
