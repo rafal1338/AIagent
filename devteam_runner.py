@@ -1,86 +1,82 @@
 # devteam_runner.py
-from coder_agent import run_coder_agent, run_verifier_agent
-from tools import write_code_file, list_project_files, read_project_spec, system_log, get_project_knowledge_base
+import json
+import re
+from coder_agent import run_coder_agent
+from tools import write_code_file, list_project_files, system_log, get_project_knowledge_base
 
-def parse_plan_to_steps(plan_content: str) -> list[str]:
-    steps = []
-    for line in plan_content.split('\n'):
-        line = line.strip()
-        if line and not line.startswith('#') and len(line) > 5:
-            cleaned_line = line.lstrip('0123456789.-*• ')
-            steps.append(cleaned_line)
-    return steps
+def extract_json_from_text(text):
+    """Wyciąga JSON z odpowiedzi LLM (nawet jak doda jakieś śmieci dookoła)"""
+    try:
+        # Szukamy klamer [] lub {}
+        match = re.search(r'\[.*\]', text, re.DOTALL)
+        if match:
+            return json.loads(match.group())
+    except: pass
+    return []
 
 def run_devteam_pipeline(initial_task: str) -> str:
-    system_log(f"🎬 START (Tryb Jakości): {initial_task}")
+    system_log(f"⚡ START OPTYMALIZACJI: {initial_task}")
     
-    # --- 1. ANALIZA STANU ISTNIEJĄCEGO ---
+    # --- FAZA 1: PLANOWANIE JSON ---
+    system_log("🧠 [1/2] Planowanie strukturalne...")
     knowledge = get_project_knowledge_base()
-    system_log("🔍 Analiza mapy projektu...")
     
-    # --- 2. PLANOWANIE ---
+    # Wymuszamy format JSON dla łatwego parsowania
     plan_prompt = (
-        f"Jesteś Tech Leadem. Zadanie: '{initial_task}'.\n\n"
-        f"OBECNA MAPA PROJEKTU:\n{knowledge}\n\n"
-        "WYTYCZNE:\n"
-        "1. Jeśli projekt jest pusty, zaplanuj strukturę od zera.\n"
-        "2. Jeśli pliki istnieją, zaplanuj ich EDYCJĘ.\n"
-        "3. Stwórz 3-5 kroków. W każdym kroku wskaż KONKRETNY PLIK.\n"
-        "4. Nie twórz duplikatów funkcjonalności.\n"
+        f"Jesteś Tech Leadem. Zadanie: '{initial_task}'.\n"
+        f"STAN PROJEKTU:\n{knowledge}\n"
+        "Zwróć plan w czystym formacie JSON (lista stringów).\n"
+        "Przykład: [\"Stwórz plik config.py\", \"Zaktualizuj main.py o funkcję X\"]\n"
+        "Maksymalnie 3-5 kroków. Bądź precyzyjny co do nazw plików."
     )
     
-    agent_result = run_coder_agent(plan_prompt, max_steps=15)
-    plan_text = agent_result.get('output', '')
+    # Krótki limit kroków, bo to tylko generacja JSON
+    agent_result = run_coder_agent(plan_prompt, max_steps=10)
+    raw_output = agent_result.get('output', '')
     
-    try: write_code_file.invoke({"filepath": "PLAN_PROJEKTU.md", "content": plan_text, "description": "Plan działania"})
-    except: pass
+    steps = extract_json_from_text(raw_output)
+    
+    if not steps:
+        system_log("⚠️ Fallback: Model nie zwrócił JSON. Używam trybu bezpośredniego.")
+        steps = [f"Zrealizuj zadanie: {initial_task}"]
+    else:
+        # Zapisujemy plan dla wglądu
+        try: write_code_file.invoke({"filepath": "PLAN_JSON.md", "content": json.dumps(steps, indent=2), "description": "Plan JSON"})
+        except: pass
 
-    steps = parse_plan_to_steps(plan_text)
-    if not steps: steps = [f"Zrealizuj: {initial_task}"]
+    system_log(f"📋 Plan: {len(steps)} kroków.")
 
-    system_log(f"📋 Plan działania: {len(steps)} kroków.")
-
-    # --- 3. REALIZACJA ---
+    # --- FAZA 2: SZYBKA EGZEKUCJA ---
+    system_log("🚀 [2/2] Kodowanie...")
     execution_log = ""
     
     for i, step in enumerate(steps, 1):
-        # Zawsze pobieramy najświeższą wiedzę o projekcie
+        # Pobieramy mapę TYLKO RAZ na krok (oszczędność I/O)
         current_knowledge = get_project_knowledge_base()
-            
+        
         system_log(f"👉 Krok {i}: {step}")
         
-        # Weryfikacja (czy krok ma sens w świetle mapy?)
-        verified_task = run_verifier_agent(step, current_knowledge)
-        
-        if verified_task != step:
-            system_log(f"💡 Korekta: {verified_task[:50]}...")
-        
-        # Zadanie dla Codera
-        full_task = (
-            f"ZADANIE PRIORYTETOWE: {verified_task}\n\n"
-            f"{current_knowledge}\n"
-            "WYMAGANIA:\n"
-            "- Pisz kod najwyższej jakości.\n"
-            "- Kod musi być kompletny.\n"
-            "- Użyj 'write_code_file' z poprawnym opisem 'description'."
-        )
-        
-        res = run_coder_agent(full_task, max_steps=50)
+        # Uruchamiamy Codera bezpośrednio (Weryfikator jest wbudowany w jego Prompt)
+        res = run_coder_agent(step, current_knowledge, max_steps=50)
         out = res.get('output', 'Zrobione.')
         
-        execution_log += f"#### Krok {i}\n**Zadanie:** {verified_task}\n\n{out}\n\n"
+        execution_log += f"#### Krok {i}: {step}\n{out}\n\n"
 
-    # --- 4. RAPORT ---
-    final_map = get_project_knowledge_base()
+    # --- RAPORT ---
+    system_log("🏁 Finalizacja...")
+    try:
+        final_map = get_project_knowledge_base()
+    except:
+        final_map = "Błąd odczytu mapy."
 
     return f"""
-    # 🚀 Raport DevTeam
+    # 🚀 Raport DevTeam (Optimized)
     ## Zadanie: {initial_task}
     
-    ## 🗺️ Stan Projektu (Mapa)
+    ## 🗺️ Mapa Projektu
     ```text
     {final_map}
     ```
-    ## 📝 Szczegóły
+    ## 📝 Logi
     {execution_log}
     """
