@@ -3,18 +3,25 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>AI DevTeam | Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI DevTeam Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
+    <!-- CSS v11.0 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=11.0">
 </head>
 <body>
-    <div class="container">
+    <div id="app-container" class="container">
+        
+        <!-- SIDEBAR -->
         <aside class="sidebar">
-            <div class="sidebar-header"><i class="fa-solid fa-layer-group"></i> Project Explorer</div>
+            <div class="sidebar-header">
+                <i class="fa-solid fa-layer-group"></i> &nbsp; Project Explorer
+            </div>
             <div class="sidebar-content">
                 <div class="sb-section" style="flex-grow: 1; display:flex; flex-direction:column;">
-                    <h3>Files <i class="fa-solid fa-rotate-right" style="cursor: pointer;" onclick="updateFileTree()"></i></h3>
+                    <h3>Files <i class="fa-solid fa-rotate-right" style="cursor: pointer;" onclick="updateFileTree()" title="Refresh"></i></h3>
                     <div id="file-tree" class="file-tree"><div class="empty-tree">Empty</div></div>
                 </div>
                 <div class="sb-section">
@@ -29,13 +36,24 @@
             </div>
         </aside>
 
+        <!-- CONTENT -->
         <div class="content-wrapper">
             <header>
-                <h1><i class="fa-brands fa-python" style="color: #3574f0;"></i> AI DevTeam Pro</h1>
+                <h1><i class="fa-brands fa-python" style="color: #6366f1;"></i> AI DevTeam Pro</h1>
+                
                 <div class="window-controls">
-                    <i class="fa-solid fa-minus"></i><i class="fa-regular fa-square"></i><i class="fa-solid fa-xmark close-btn"></i>
+                    <!-- PRZYCISK ZMIANY MOTYWU -->
+                    <div class="theme-toggle">
+                        <i id="theme-icon" class="fa-solid fa-sun" title="Toggle Light/Dark Mode" onclick="toggleTheme()"></i>
+                    </div>
+
+                    <i class="fa-solid fa-minus" title="Minimize" onclick="minimizeApp()"></i>
+                    <i class="fa-regular fa-square" title="Maximize" onclick="toggleMaximize()"></i>
+                    <i class="fa-solid fa-times close-btn" title="Close" onclick="closeApp()"></i>
+                    <div class="ais"></div>
                 </div>
             </header>
+
             <main>
                 <div id="run-view">
                     <form id="task-form">
@@ -43,40 +61,108 @@
                             <label>Input Command</label>
                             <textarea id="task_input" placeholder="# Opisz projekt..." required autofocus></textarea>
                         </div>
-                        <div class="action-bar"><button type="submit" id="run-btn"><i class="fa-solid fa-play"></i> Run</button></div>
+                        <div class="action-bar">
+                            <button type="submit" id="run-btn"><i class="fa-solid fa-play"></i> Run Agent</button>
+                        </div>
                     </form>
+
                     <div id="result-wrapper" class="result-container" style="display: none;">
-                        <div class="result-header">Output</div>
+                        <div class="result-header"><i class="fa-solid fa-terminal"></i> Terminal Output</div>
                         <div id="result-content" class="result"></div>
                     </div>
                 </div>
-                <div id="editor-view" style="display: none; flex-direction: column; height: 100%;">
+
+                <div id="editor-view">
                     <div class="editor-header">
-                        <span id="current-filename"></span>
+                        <span id="current-filename"><i class="fa-regular fa-file"></i> unknown</span>
                         <div class="editor-actions">
-                            <button onclick="saveFile()" class="btn-secondary">Save</button>
-                            <button onclick="closeEditor()" class="btn-secondary">Close</button>
+                            <button onclick="saveFile()" class="btn-secondary"><i class="fa-regular fa-floppy-disk"></i> Save</button>
+                            <button onclick="closeEditor()" class="btn-secondary"><i class="fa-solid fa-xmark"></i> Close</button>
                         </div>
                     </div>
                     <textarea id="code-editor" spellcheck="false"></textarea>
                 </div>
             </main>
+
+            <footer>
+                <span>AI Model: <strong>Qwen3-Coder</strong></span>
+                <span class="divider">|</span>
+                <span>Author: <strong>rafal13381</strong></span>
+                <span class="divider">|</span>
+                <a href="https://github.com/rafal1338/AIagent" target="_blank"><i class="fa-brands fa-github"></i> Repo</a>
+                <span class="divider">|</span>
+                <span>v2.8.0</span>
+            </footer>
         </div>
     </div>
 
     <script>
+        // --- THEME SWITCHING LOGIC ---
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            
+            if (html.getAttribute('data-theme') === 'light') {
+                html.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'dark');
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                html.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        }
+
+        // Load saved theme
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme');
+            const icon = document.getElementById('theme-icon');
+            if (savedTheme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        });
+
+        // --- RESZTA LOGIKI ---
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX;
+            const y = e.clientY;
+            document.body.style.setProperty('--x', x + 'px');
+            document.body.style.setProperty('--y', y + 'px');
+        });
+
+        function toggleMaximize() {
+            const container = document.getElementById('app-container');
+            container.classList.toggle('maximized');
+        }
+        function minimizeApp() { alert("Zminimalizowano"); }
+        function closeApp() {
+            if(confirm("Zamknąć sesję?")) {
+                document.body.innerHTML = "<h1 style='color:white;text-align:center;margin-top:20%'>Sesja Zakończona</h1>";
+            }
+        }
+
         const form = document.getElementById('task-form');
         const btn = document.getElementById('run-btn');
         const consoleDiv = document.getElementById('log-console');
         const progressBar = document.getElementById('progress-bar');
         const statusText = document.getElementById('status-text');
+        const runView = document.getElementById('run-view');
+        const editorView = document.getElementById('editor-view');
+        const codeEditor = document.getElementById('code-editor');
+        const currentFilenameSpan = document.getElementById('current-filename');
+        let currentFilePath = null;
+        let treeInterval;
         
-        // Initial load
         updateFileTree();
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const task = document.getElementById('task_input').value;
+            closeEditor();
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Working...';
             consoleDiv.innerHTML = '';
@@ -84,13 +170,15 @@
             progressBar.style.width = '5%';
             statusText.innerText = "Running...";
             statusText.style.color = "#e2c08d";
+            addLog("Initializing...");
 
             try {
-                await fetch('/run', {
+                const res = await fetch('/run', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({task_input: task})
                 });
+                if (!res.ok) throw new Error("Busy/Error");
                 startEventSource();
             } catch (err) {
                 addLog("Error: " + err.message, 'error');
@@ -102,38 +190,16 @@
             const evtSource = new EventSource("/stream");
             let buffer = "";
             let isResult = false;
-
             evtSource.onmessage = function(event) {
-                // Parsujemy dane z serwera
                 const data = JSON.parse(event.data);
-                
-                // --- NAPRAWA LOGIKI ODBIORU ---
-                // Serwer wysyła: {"type": "...", "content": "..."}
-                // Stary kod szukał data.msg.type, co powodowało błąd.
-                
-                // Pobieramy treść i typ bezpośrednio
-                const content = data.content || data.msg || ""; 
-                const type = data.type || "log";
+                const msg = data.msg;
+                const content = (typeof msg === 'object') ? (msg.content || "") : msg;
+                const type = (typeof msg === 'object') ? (msg.type || "log") : "log";
 
-                if (content === "__DONE__") {
-                    evtSource.close();
-                    finishJob();
-                    return;
-                }
+                if (content === "__DONE__") { evtSource.close(); finishJob(); return; }
+                if (type === "refresh") { updateFileTree(); return; }
 
-                // Obsługa sygnału odświeżenia drzewa plików
-                if (type === "refresh") {
-                    updateFileTree();
-                    // Jeśli to tylko sygnał odświeżenia bez treści, nie logujemy pustego wiersza
-                    if (!content) return; 
-                }
-
-                // Obsługa wyniku końcowego (Markdown)
-                if (content.startsWith("__RESULT_START__")) {
-                    isResult = true;
-                    buffer = content.replace("__RESULT_START__\n", "");
-                    return;
-                }
+                if (content.startsWith("__RESULT_START__")) { isResult = true; buffer = content.replace("__RESULT_START__\n", ""); return; }
                 if (content.includes("__RESULT_END__")) {
                     isResult = false;
                     buffer += content.replace("\n__RESULT_END__", "");
@@ -143,58 +209,46 @@
                 }
                 if (isResult) { buffer += content + "\n"; return; }
 
-                // Normalny log (wyświetlamy w konsoli)
-                if (content) {
-                    addLog(content);
-                    let w = parseFloat(progressBar.style.width) || 0;
-                    if(w < 95) progressBar.style.width = (w + 2) + '%';
-                }
+                addLog(content);
+                animateProgress();
             };
-            
-            evtSource.onerror = () => { 
-                evtSource.close(); 
-                finishJob(); 
-            };
+            evtSource.onerror = () => { evtSource.close(); finishJob(); };
         }
 
-        function addLog(text, type='info') {
+        function addLog(text) {
+            if(!text) return;
             const div = document.createElement('div');
             div.className = 'log-entry';
-            let color = "#bcbec4";
-            
-            // Kolorowanie logów na podstawie treści
-            if (text.includes("❌") || text.includes("Error")) color = "#cf514e"; // Czerwony
-            else if (text.includes("✅")) color = "#57965c"; // Zielony
-            else if (text.includes("💾")) color = "#3574f0"; // Niebieski (zapis)
-            else if (text.includes("🚀") || text.includes("🤖")) color = "#e2c08d"; // Żółty/Złoty (AI)
-            
-            // Dodajemy czas
-            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
-            
-            div.innerHTML = `<span class="log-time">${time}</span> <span class="log-msg" style="color:${color}">${text}</span>`;
+            let color = "var(--text-muted)";
+            if (text.includes("❌")) color = "var(--color-error)";
+            else if (text.includes("✅")) color = "var(--color-success)";
+            else if (text.includes("💾")) color = "var(--accent)";
+            div.innerHTML = `<span style="color:#52525b; margin-right:5px;">${new Date().toLocaleTimeString()}</span> <span style="color:${color}">${text}</span>`;
             consoleDiv.appendChild(div);
             consoleDiv.scrollTop = consoleDiv.scrollHeight;
         }
 
+        function animateProgress() {
+            let w = parseFloat(progressBar.style.width) || 0;
+            if(w < 95) progressBar.style.width = (w + 2) + '%';
+        }
+
         function finishJob() {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-play"></i> Run';
+            btn.innerHTML = '<i class="fa-solid fa-play"></i> Run Agent';
             progressBar.style.width = '100%';
-            progressBar.style.backgroundColor = '#57965c';
+            progressBar.style.backgroundColor = 'var(--color-success)';
             statusText.innerText = "Done";
-            statusText.style.color = "#57965c";
+            statusText.style.color = "var(--color-success)";
             updateFileTree();
         }
 
-        // --- FILE TREE LOGIC ---
         async function updateFileTree() {
             try {
                 const res = await fetch('/files');
                 const data = await res.json();
                 document.getElementById('file-tree').innerHTML = renderTree(data);
-            } catch(e) {
-                console.error("Tree update error:", e);
-            }
+            } catch(e) {}
         }
 
         function renderTree(items) {
@@ -204,7 +258,6 @@
                 if (item.type === 'folder') {
                     html += `<li><div class="tree-item"><i class="fa-regular fa-folder"></i> ${item.name}</div>${renderTree(item.children)}</li>`;
                 } else {
-                    // Dodajemy path do onclick
                     html += `<li><div class="tree-item file-link" onclick="openFile('${item.path.replace(/\\/g, "\\\\")}')"><i class="fa-regular fa-file-code"></i> ${item.name}</div></li>`;
                 }
             });
@@ -212,43 +265,37 @@
             return html;
         }
 
-        // --- EDITOR LOGIC ---
         async function openFile(path) {
             try {
                 const res = await fetch(`/get_file?path=${encodeURIComponent(path)}`);
                 if (!res.ok) throw new Error("Read error");
                 const content = await res.text();
-                
                 document.getElementById('run-view').style.display = 'none';
                 document.getElementById('editor-view').style.display = 'flex';
-                document.getElementById('code-editor').value = content;
+                codeEditor.value = content;
                 document.getElementById('current-filename').innerText = path;
-                window.currentFilePath = path;
-            } catch (e) {
-                addLog("Cannot open file: " + e.message);
-            }
+                currentFilePath = path;
+            } catch (e) { addLog(e.message); }
         }
 
         async function saveFile() {
-            if(!window.currentFilePath) return;
+            if(!currentFilePath) return;
             try {
                 const res = await fetch('/save_file', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({path: window.currentFilePath, content: document.getElementById('code-editor').value})
+                    body: JSON.stringify({path: currentFilePath, content: codeEditor.value})
                 });
                 const json = await res.json();
-                if (json.status === "ok") addLog("💾 File saved: " + window.currentFilePath);
-                else addLog("❌ Save failed: " + json.msg);
-            } catch(e) {
-                addLog("❌ Network error during save");
-            }
+                if (json.status === "ok") addLog("💾 Saved: " + currentFilePath);
+                else addLog("❌ Save failed");
+            } catch(e) { addLog("❌ Network error"); }
         }
 
         function closeEditor() {
             document.getElementById('editor-view').style.display = 'none';
             document.getElementById('run-view').style.display = 'flex';
-            window.currentFilePath = null;
+            currentFilePath = null;
         }
     </script>
 </body>
