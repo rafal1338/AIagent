@@ -8,8 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- CSS v11.0 -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=11.0">
+    <!-- CSS v12.0 - Wymuszenie odświeżenia -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=12.0">
 </head>
 <body>
     <div id="app-container" class="container">
@@ -39,17 +39,16 @@
         <!-- CONTENT -->
         <div class="content-wrapper">
             <header>
-                <h1><i class="fa-brands fa-python" style="color: #6366f1;"></i> AI DevTeam Pro</h1>
+                <h1>
+                    <!-- ZMIANA: Dodano link do strony głównej -->
+                    <a href="/" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px;">
+                        <i class="fa-brands fa-python" style="color: #6366f1;"></i> AI DevTeam Pro
+                    </a>
+                </h1>
                 
-                <div class="window-controls">
-                    <!-- PRZYCISK ZMIANY MOTYWU -->
-                    <div class="theme-toggle">
-                        <i id="theme-icon" class="fa-solid fa-sun" title="Toggle Light/Dark Mode" onclick="toggleTheme()"></i>
-                    </div>
-
-                    <i class="fa-solid fa-minus" title="Minimize" onclick="minimizeApp()"></i>
-                    <i class="fa-regular fa-square" title="Maximize" onclick="toggleMaximize()"></i>
-                    <i class="fa-solid fa-times close-btn" title="Close" onclick="closeApp()"></i>
+                <!-- Tylko przełącznik motywu -->
+                <div class="theme-toggle">
+                    <i id="theme-icon" class="fa-solid fa-sun" title="Toggle Light/Dark Mode" onclick="toggleTheme()"></i>
                     <div class="ais"></div>
                 </div>
             </header>
@@ -91,17 +90,16 @@
                 <span class="divider">|</span>
                 <a href="https://github.com/rafal1338/AIagent" target="_blank"><i class="fa-brands fa-github"></i> Repo</a>
                 <span class="divider">|</span>
-                <span>v2.8.0</span>
+                <span>v3.0.0</span>
             </footer>
         </div>
     </div>
 
     <script>
-        // --- THEME SWITCHING LOGIC ---
+        // --- THEME SWITCHING ---
         function toggleTheme() {
             const html = document.documentElement;
             const icon = document.getElementById('theme-icon');
-            
             if (html.getAttribute('data-theme') === 'light') {
                 html.removeAttribute('data-theme');
                 localStorage.setItem('theme', 'dark');
@@ -114,37 +112,14 @@
                 icon.classList.add('fa-moon');
             }
         }
-
-        // Load saved theme
         document.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('theme');
-            const icon = document.getElementById('theme-icon');
-            if (savedTheme === 'light') {
+            if (localStorage.getItem('theme') === 'light') {
                 document.documentElement.setAttribute('data-theme', 'light');
-                icon.classList.remove('fa-sun');
-                icon.classList.add('fa-moon');
+                document.getElementById('theme-icon').classList.replace('fa-sun', 'fa-moon');
             }
         });
 
-        // --- RESZTA LOGIKI ---
-        document.addEventListener('mousemove', (e) => {
-            const x = e.clientX;
-            const y = e.clientY;
-            document.body.style.setProperty('--x', x + 'px');
-            document.body.style.setProperty('--y', y + 'px');
-        });
-
-        function toggleMaximize() {
-            const container = document.getElementById('app-container');
-            container.classList.toggle('maximized');
-        }
-        function minimizeApp() { alert("Zminimalizowano"); }
-        function closeApp() {
-            if(confirm("Zamknąć sesję?")) {
-                document.body.innerHTML = "<h1 style='color:white;text-align:center;margin-top:20%'>Sesja Zakończona</h1>";
-            }
-        }
-
+        /* ... RESZTA LOGIKI AGENTA ... */
         const form = document.getElementById('task-form');
         const btn = document.getElementById('run-btn');
         const consoleDiv = document.getElementById('log-console');
@@ -155,7 +130,6 @@
         const codeEditor = document.getElementById('code-editor');
         const currentFilenameSpan = document.getElementById('current-filename');
         let currentFilePath = null;
-        let treeInterval;
         
         updateFileTree();
 
@@ -210,7 +184,8 @@
                 if (isResult) { buffer += content + "\n"; return; }
 
                 addLog(content);
-                animateProgress();
+                let w = parseFloat(progressBar.style.width) || 0;
+                if(w < 95) progressBar.style.width = (w + 2) + '%';
             };
             evtSource.onerror = () => { evtSource.close(); finishJob(); };
         }
@@ -226,11 +201,6 @@
             div.innerHTML = `<span style="color:#52525b; margin-right:5px;">${new Date().toLocaleTimeString()}</span> <span style="color:${color}">${text}</span>`;
             consoleDiv.appendChild(div);
             consoleDiv.scrollTop = consoleDiv.scrollHeight;
-        }
-
-        function animateProgress() {
-            let w = parseFloat(progressBar.style.width) || 0;
-            if(w < 95) progressBar.style.width = (w + 2) + '%';
         }
 
         function finishJob() {

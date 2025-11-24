@@ -1,4 +1,4 @@
-/* --- Paleta Kolorów "Midnight Modern" (Domyślny Ciemny) --- */
+/* --- Paleta Kolorów "Midnight Modern" --- */
 :root {
     --bg-app: #050505;
     --bg-panel: #121214;
@@ -6,41 +6,27 @@
     --border: #27272a;
     --accent: #6366f1;
     --accent-hover: #4f46e5;
-    --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
     --text-main: #f4f4f5;
     --text-muted: #a1a1aa;
     --input-bg: #18181b;
     --code-bg: #09090b;
     --color-error: #f43f5e;
     --color-success: #10b981;
-    
-    /* Cienie dla ciemnego motywu */
-    --shadow-app: 0 20px 60px rgba(0, 0, 0, 0.8);
-    --scrollbar-thumb: #3f3f46;
-    
-    /* Tło Body (Ciemne) */
-    --body-bg-image: radial-gradient(circle at 50% 0%, #1f1f25 0%, #050505 70%);
 }
 
-/* --- MOTYW JASNY (Light Mode) --- */
 [data-theme="light"] {
-    --bg-app: #f0f2f5;          /* Jasnoszare tło pod spodem */
-    --bg-panel: #ffffff;        /* Biały panel główny */
-    --bg-sidebar: #f8fafc;      /* Bardzo jasny szary sidebar */
-    --border: #e2e8f0;          /* Jasne ramki (Slate-200) */
-    --accent: #4f46e5;          /* Nieco ciemniejszy Indigo dla kontrastu */
+    --bg-app: #ffffff;
+    --bg-panel: #ffffff;
+    --bg-sidebar: #f8fafc;
+    --border: #e2e8f0;
+    --accent: #4f46e5;
     --accent-hover: #4338ca;
-    --text-main: #1e293b;       /* Ciemny granat/szary tekst */
-    --text-muted: #64748b;      /* Wygaszony szary */
-    --input-bg: #ffffff;        /* Białe inputy */
-    --code-bg: #f1f5f9;         /* Jasne tło kodu */
-    
-    /* Cienie dla jasnego motywu (delikatniejsze) */
-    --shadow-app: 0 20px 50px -12px rgba(0, 0, 0, 0.15);
-    --scrollbar-thumb: #cbd5e1;
-    
-    /* Tło Body (Jasne) */
-    --body-bg-image: radial-gradient(circle at 50% 0%, #e0e7ff 0%, #f3f4f6 70%);
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --input-bg: #ffffff;
+    --code-bg: #f1f5f9;
+    --color-error: #ef4444;
+    --color-success: #10b981;
 }
 
 /* RESET */
@@ -52,58 +38,38 @@ body {
     color: var(--text-muted);
     height: 100vh;
     width: 100vw;
-    display: flex;
-    justify_content: center;
-    align-items: center;
-    padding: 20px;
     overflow: hidden;
-    
-    /* Używamy zmiennej dla tła, żeby zmieniało się z motywem */
-    background-image: var(--body-bg-image);
-    transition: background-color 0.3s, color 0.3s;
+    padding: 0;
 }
 
 /* --- GŁÓWNE OKNO --- */
 .container {
     width: 100%;
-    max-width: 1400px;
-    height: 90vh;
+    height: 100%;
+    max-width: none;
     
     background-color: var(--bg-panel);
-    border: 1px solid var(--border); /* Uproszczony border */
-    border-radius: 12px;
-    box-shadow: var(--shadow-app);
     
-    /* GRID: Lewa kolumna sztywna (260px), Prawa reszta (1fr) */
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    
     display: grid;
     grid-template-columns: 260px 1fr; 
     overflow: hidden;
-    z-index: 1; 
-    
-    transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
 }
 
-.container.maximized {
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: none !important;
-    border-radius: 0 !important;
-    border: none !important;
-    margin: 0 !important;
-}
-
-/* --- LEWY PANEL (SIDEBAR) --- */
+/* --- LEWY PANEL --- */
 .sidebar {
     background-color: var(--bg-sidebar);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     overflow: hidden; 
-    transition: background-color 0.3s, border-color 0.3s;
 }
 
 .sidebar-header {
-    height: 60px;
+    height: 55px;
     padding: 0 20px;
     border-bottom: 1px solid var(--border);
     display: flex;
@@ -124,7 +90,7 @@ body {
     gap: 30px;
 }
 
-/* --- PRAWY PANEL (CONTENT) --- */
+/* --- PRAWY PANEL --- */
 .content-wrapper {
     display: flex;
     flex-direction: column;
@@ -133,9 +99,9 @@ body {
     min-width: 0;     
 }
 
-/* --- HEADER (NAGŁÓWEK) --- */
+/* --- NAGŁÓWEK --- */
 header {
-    height: 60px;
+    height: 55px;
     padding: 0 25px;
     border-bottom: 1px solid var(--border);
     
@@ -145,8 +111,6 @@ header {
     
     width: 100%;
     flex-shrink: 0;
-    background-color: var(--bg-panel);
-    transition: background-color 0.3s, border-color 0.3s;
 }
 
 h1 {
@@ -159,45 +123,24 @@ h1 {
     margin: 0;
 }
 
-/* --- IKONKI OKNA --- */
-.window-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px; 
-    height: 100%;
-}
-
-/* Stylizacja przycisków */
-.window-controls i {
+.theme-toggle i {
     color: var(--text-muted);
-    font-size: 14px;
-    width: 34px;
-    height: 34px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    font-size: 16px;
+    padding: 8px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+.theme-toggle i:hover {
+    background-color: var(--input-bg);
+    color: var(--text-main);
 }
 
-/* Hover w zależności od motywu */
-.window-controls i:hover { background-color: rgba(128, 128, 128, 0.15); color: var(--text-main); }
-.window-controls i.close-btn:hover { background-color: var(--color-error); color: white; }
-
-/* Przycisk motywu */
-.theme-toggle {
-    margin-right: 15px; /* Odstęp od guzików okna */
-    border-right: 1px solid var(--border);
-    padding-right: 15px;
-}
-
-/* --- MAIN CONTENT --- */
+/* --- TREŚĆ GŁÓWNA --- */
 main {
     padding: 25px;
     flex-grow: 1;
     overflow-y: auto; 
-    overflow-x: hidden; 
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -208,8 +151,8 @@ form { width: 100%; display: flex; flex-direction: column; gap: 15px; }
 label { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; display: block; text-transform: uppercase; }
 
 textarea {
-    width: 97%;
-    height: 120px;
+    width: 98%;
+    height: 220px;
     min-height: 80px;
     max-height: 600px;
     padding: 15px;
@@ -223,7 +166,6 @@ textarea {
     resize: vertical; 
     outline: none;
     display: block;
-    transition: background-color 0.3s, border-color 0.3s, color 0.3s;
 }
 textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 
@@ -231,19 +173,38 @@ textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent
 
 button {
     padding: 10px 24px;
-    background: var(--accent); /* Uproszczone tło dla kompatybilności z light mode */
+    background-color: var(--accent);
     color: white;
     border: none;
     border-radius: 6px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Płynniejsza animacja */
+    position: relative;
+    overflow: hidden;
 }
-button:hover { background-color: var(--accent-hover); transform: translateY(-1px); }
-button:disabled { background-color: var(--border); color: var(--text-muted); cursor: not-allowed; }
 
-/* WYNIKI */
+/* --- NOWY EFEKT HOVER NA PRZYCISKU --- */
+button:hover {
+    /* Wyraźny gradient od niebieskiego do fioletu */
+    background-image: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
+    /* Mocna poświata */
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.6);
+    /* Lekkie powiększenie i uniesienie */
+    transform: translateY(-2px) scale(1.02);
+}
+
+button:disabled {
+    background-color: var(--border);
+    background-image: none;
+    color: var(--text-muted);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+/* --- WYNIKI --- */
 .result-container { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .result-header { font-size: 12px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
 .result {
@@ -254,31 +215,31 @@ button:disabled { background-color: var(--border); color: var(--text-muted); cur
     border-radius: 8px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
-    color: var(--text-muted); /* W light mode kod też powinien być czytelny */
+    color: var(--text-muted);
     white-space: pre-wrap;
     overflow-x: auto;
 }
 
-/* EDYTOR */
+/* --- EDYTOR --- */
 #run-view { display: flex; flex-direction: column; height: 100%; width: 100%; }
 #editor-view { display: none; flex-direction: column; height: 100%; width: 100%; }
 .editor-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--border); margin-bottom: 15px; flex-shrink: 0; }
 #current-filename { font-family: 'JetBrains Mono', monospace; color: var(--accent); font-weight: 600; }
-#code-editor { flex-grow: 1; width: 100%; background: var(--code-bg); border: 1px solid var(--border); color: var(--text-main); padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; resize: none; outline: none; border-radius: 8px; line-height: 1.6; }
+#code-editor { flex-grow: 1; width: 100%; background: var(--code-bg); border: 1px solid var(--border); color: #a9b7c6; padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; resize: none; outline: none; border-radius: 8px; line-height: 1.6; }
 #code-editor:focus { border-color: var(--accent); }
 .editor-actions { display: flex; gap: 10px; }
 .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; }
 .btn-secondary:hover { background: var(--border); color: var(--text-main); }
 
-/* STOPKA */
-footer { height: 35px; background-color: var(--bg-panel); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-end; padding: 0 25px; font-size: 11px; color: var(--text-muted); flex-shrink: 0; gap: 15px; }
+/* --- STOPKA --- */
+footer { height: 35px; background-color: var(--bg-panel); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-end; padding: 0 25px; font-size: 11px; color: #52525b; flex-shrink: 0; gap: 15px; }
 footer a { color: var(--text-muted); text-decoration: none; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
 footer a:hover { color: var(--accent); }
 
-/* SIDEBAR ITEMS */
+/* --- SIDEBAR ITEMS --- */
 .file-tree ul { padding-left: 15px; list-style: none; margin: 0; }
-.tree-item { padding: 4px 8px; cursor: pointer; color: var(--text-muted); font-size: 13px; display: flex; align-items: center; gap: 8px; }
-.tree-item:hover { background: rgba(128,128,128,0.1); color: var(--text-main); }
+.tree-item { padding: 6px 8px; cursor: pointer; color: var(--text-muted); font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.tree-item:hover { background: var(--border); color: var(--text-main); }
 .tree-item i { width: 16px; text-align: center; opacity: 0.7; }
 .tree-item .fa-folder { color: #eab308; }
 .tree-item .fa-file-code { color: var(--accent); }
@@ -289,9 +250,8 @@ footer a:hover { color: var(--accent); }
 .log-console { background: var(--code-bg); border: 1px solid var(--border); padding: 10px; height: 200px; overflow-y: auto; font-size: 11px; font-family: monospace; color: var(--text-muted); border-radius: 6px; }
 .log-entry { margin-bottom: 4px; display: flex; gap: 8px; }
 
-/* SCROLLBAR */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb); border: 3px solid transparent; background-clip: content-box; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background-color: var(--text-muted); }
-.ais{width: 25px;}
+::-webkit-scrollbar-thumb { background-color: #3f3f46; border: 3px solid transparent; background-clip: content-box; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background-color: #52525b; }
+.ais{width: 35px; float: left;}
