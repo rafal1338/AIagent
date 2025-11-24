@@ -104,11 +104,16 @@
             let isResult = false;
 
             evtSource.onmessage = function(event) {
+                // Parsujemy dane z serwera
                 const data = JSON.parse(event.data);
                 
-                // ODBIÓR WIADOMOŚCI Z TOOLS.PY
-                const type = data.msg.type || "log"; // Domyślnie log (dla wstecznej kompatybilności)
-                const content = data.msg.content || data.msg;
+                // --- NAPRAWA LOGIKI ODBIORU ---
+                // Serwer wysyła: {"type": "...", "content": "..."}
+                // Stary kod szukał data.msg.type, co powodowało błąd.
+                
+                // Pobieramy treść i typ bezpośrednio
+                const content = data.content || data.msg || ""; 
+                const type = data.type || "log";
 
                 if (content === "__DONE__") {
                     evtSource.close();
@@ -116,13 +121,14 @@
                     return;
                 }
 
-                // Obsługa sygnału odświeżenia
+                // Obsługa sygnału odświeżenia drzewa plików
                 if (type === "refresh") {
                     updateFileTree();
-                    return;
+                    // Jeśli to tylko sygnał odświeżenia bez treści, nie logujemy pustego wiersza
+                    if (!content) return; 
                 }
 
-                // Obsługa wyniku
+                // Obsługa wyniku końcowego (Markdown)
                 if (content.startsWith("__RESULT_START__")) {
                     isResult = true;
                     buffer = content.replace("__RESULT_START__\n", "");
@@ -137,23 +143,35 @@
                 }
                 if (isResult) { buffer += content + "\n"; return; }
 
-                // Normalny log
-                addLog(content);
-                let w = parseFloat(progressBar.style.width) || 0;
-                if(w < 95) progressBar.style.width = (w + 2) + '%';
+                // Normalny log (wyświetlamy w konsoli)
+                if (content) {
+                    addLog(content);
+                    let w = parseFloat(progressBar.style.width) || 0;
+                    if(w < 95) progressBar.style.width = (w + 2) + '%';
+                }
             };
-            evtSource.onerror = () => { evtSource.close(); finishJob(); };
+            
+            evtSource.onerror = () => { 
+                evtSource.close(); 
+                finishJob(); 
+            };
         }
 
         function addLog(text, type='info') {
             const div = document.createElement('div');
             div.className = 'log-entry';
             let color = "#bcbec4";
-            if (text.includes("❌")) color = "#cf514e";
-            else if (text.includes("✅")) color = "#57965c";
-            else if (text.includes("💾")) color = "#3574f0";
             
-            div.innerHTML = `<span class="log-msg" style="color:${color}">${text}</span>`;
+            // Kolorowanie logów na podstawie treści
+            if (text.includes("❌") || text.includes("Error")) color = "#cf514e"; // Czerwony
+            else if (text.includes("✅")) color = "#57965c"; // Zielony
+            else if (text.includes("💾")) color = "#3574f0"; // Niebieski (zapis)
+            else if (text.includes("🚀") || text.includes("🤖")) color = "#e2c08d"; // Żółty/Złoty (AI)
+            
+            // Dodajemy czas
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            
+            div.innerHTML = `<span class="log-time">${time}</span> <span class="log-msg" style="color:${color}">${text}</span>`;
             consoleDiv.appendChild(div);
             consoleDiv.scrollTop = consoleDiv.scrollHeight;
         }
@@ -168,13 +186,15 @@
             updateFileTree();
         }
 
-        // File Tree Logic
+        // --- FILE TREE LOGIC ---
         async function updateFileTree() {
             try {
                 const res = await fetch('/files');
                 const data = await res.json();
                 document.getElementById('file-tree').innerHTML = renderTree(data);
-            } catch(e) {}
+            } catch(e) {
+                console.error("Tree update error:", e);
+            }
         }
 
         function renderTree(items) {
@@ -184,37 +204,51 @@
                 if (item.type === 'folder') {
                     html += `<li><div class="tree-item"><i class="fa-regular fa-folder"></i> ${item.name}</div>${renderTree(item.children)}</li>`;
                 } else {
-                    html += `<li><div class="tree-item file-link" onclick="openFile('${item.path}')"><i class="fa-regular fa-file-code"></i> ${item.name}</div></li>`;
+                    // Dodajemy path do onclick
+                    html += `<li><div class="tree-item file-link" onclick="openFile('${item.path.replace(/\\/g, "\\\\")}')"><i class="fa-regular fa-file-code"></i> ${item.name}</div></li>`;
                 }
             });
             html += '</ul>';
             return html;
         }
 
-        // Editor Logic
+        // --- EDITOR LOGIC ---
         async function openFile(path) {
-            const res = await fetch(`/get_file?path=${encodeURIComponent(path)}`);
-            const content = await res.text();
-            document.getElementById('run-view').style.display = 'none';
-            document.getElementById('editor-view').style.display = 'flex';
-            document.getElementById('code-editor').value = content;
-            document.getElementById('current-filename').innerText = path;
-            window.currentFilePath = path;
+            try {
+                const res = await fetch(`/get_file?path=${encodeURIComponent(path)}`);
+                if (!res.ok) throw new Error("Read error");
+                const content = await res.text();
+                
+                document.getElementById('run-view').style.display = 'none';
+                document.getElementById('editor-view').style.display = 'flex';
+                document.getElementById('code-editor').value = content;
+                document.getElementById('current-filename').innerText = path;
+                window.currentFilePath = path;
+            } catch (e) {
+                addLog("Cannot open file: " + e.message);
+            }
         }
 
         async function saveFile() {
             if(!window.currentFilePath) return;
-            await fetch('/save_file', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({path: window.currentFilePath, content: document.getElementById('code-editor').value})
-            });
-            addLog("Saved: " + window.currentFilePath);
+            try {
+                const res = await fetch('/save_file', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({path: window.currentFilePath, content: document.getElementById('code-editor').value})
+                });
+                const json = await res.json();
+                if (json.status === "ok") addLog("💾 File saved: " + window.currentFilePath);
+                else addLog("❌ Save failed: " + json.msg);
+            } catch(e) {
+                addLog("❌ Network error during save");
+            }
         }
 
         function closeEditor() {
             document.getElementById('editor-view').style.display = 'none';
             document.getElementById('run-view').style.display = 'flex';
+            window.currentFilePath = null;
         }
     </script>
 </body>
