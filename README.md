@@ -10,56 +10,60 @@
 ## 💡 Diagram Architektury Mermaid
 ```mermaid
 graph TD
-    %% Definicja Stylów
-    classDef llm fill:#e0f7fa,stroke:#00bcd4,stroke-width:2px;
-    classDef db fill:#fff3e0,stroke:#ff9800,stroke-width:2px;
-    classDef agent fill:#e8f5f5,stroke:#4caf50,stroke-width:2px;
-    classDef tool fill:#f3e5f5,stroke:#9c27b0,stroke-width:1px;
-    classDef io fill:#fbe9e7,stroke:#ff5722,stroke-width:2px;
+    %% --- Style ---
+    classDef actor fill:#ffcc80,stroke:#333,stroke-width:2px,color:#000;
+    classDef ui fill:#b3e5fc,stroke:#0277bd,stroke-width:2px,color:#000;
+    classDef logic fill:#fff9c4,stroke:#fbc02d,stroke-width:2px,color:#000;
+    classDef storage fill:#e0f2f1,stroke:#00695c,stroke-width:2px,stroke-dasharray: 5 5,color:#000;
+    classDef agent fill:#e1bee7,stroke:#7b1fa2,stroke-width:2px,color:#000;
+    classDef external fill:#ffab91,stroke:#d84315,stroke-width:2px,color:#000;
 
-    %% Węzły
-    subgraph Core Technologies
-        O[Ollama LLMs]:::llm
-        C(ChromaDB\nPamięć Długoterminowa):::db
-        FS[System Plików]:::io
+    %% --- Węzły ---
+    User([👤 Użytkownik]):::actor
+    UI[🖥️ Interfejs WWW / Flask]:::ui
+    App[⚙️ app.py - Wątek w tle]:::logic
+    
+    subgraph Orchestrator ["🧠 Orkiestrator (devteam_runner.py)"]
+        direction TB
+        Planner{📋 Planowanie}:::logic
+        Steps[📝 Lista Kroków]:::logic
+        Loop[🔄 Pętla Wykonawcza]:::logic
+    end
+    
+    subgraph AgentEnv ["🤖 Środowisko Agenta (coder_agent.py)"]
+        direction TB
+        Coder[👨‍💻 Senior Coder Agent]:::agent
+        Ollama[[🦙 Ollama: qwen3-coder]]:::external
+    end
+    
+    subgraph ToolsSystem ["🛠️ System Plików i Narzędzia (tools.py)"]
+        direction TB
+        Tools[🧰 Narzędzia LangChain]:::logic
+        FS[📂 System Plików /program]:::storage
+        KB[(🗄️ project_map.json)]:::storage
+        LogStream[📡 Strumień Logów]:::ui
     end
 
-    subgraph LangChain Agents
-        PM(1. PM - Project Manager):::agent
-        ARC(2. Architect/Designer):::agent
-        COD(3. Programista/Coder):::agent
-        DOC(4. Dokumentalista):::agent
-        QA(5. Tester/QA):::agent
-    end
-
-    subgraph LangChain Tools
-        FT[FileManagementTool]:::tool
-    end
-
-    %% Połączenia Komunikacji (LLM)
-    O --- PM
-    O --- ARC
-    O --- COD
-    O --- DOC
-    O --- QA
-
-    %% Połączenia RAG (Pamięć)
-    PM -->|Zapisuje: Plan| C
-    C -->|Pobiera: Plan| ARC
-    ARC -->|Zapisuje: Specyfikacja| C
-    C -->|Pobiera: Specyfikacja/Kod| COD
-    COD -->|Zapisuje: Wygenerowany Kod| C
-    C -->|Pobiera: Wszystko| DOC
-    QA -->|Zapisuje: Raporty Błędów| C
-
-    %% Połączenia Narzędzia (I/O)
-    PM -->|`create_directory`| FT
-    ARC -->|`create_directory` / `write_file`| FT
-    COD -->|`write_file`| FT
-    QA -->|`read_file` / `write_file`| FT
-    DOC -->|`read_file` / `write_file`| FT
-
-    FT --> FS
+    %% --- Połączenia ---
+    User -->|Zadanie| UI
+    UI -->|POST /run| App
+    App -->|Start| Planner
+    
+    Planner -->|Analiza Mapy| KB
+    Planner -->|Generacja JSON| Steps
+    Steps -->|Dla każdego kroku| Loop
+    
+    Loop -->|Kontekst + Zadanie| Coder
+    Coder <-->|Inference| Ollama
+    
+    Coder -->|Decyzja/Wywołanie| Tools
+    
+    Tools -->|Zapis Pliku| FS
+    Tools -->|Aktualizacja Mapy| KB
+    Tools -->|Sygnał SSE| LogStream
+    
+    LogStream -.->|Server-Sent Events| UI
+    FS -.->|Odczyt Drzewa| UI
 
 ```
 </details>
