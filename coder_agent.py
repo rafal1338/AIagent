@@ -32,10 +32,9 @@ KRYTYCZNE ZASADY (Strict Mode):
 1. **MAPA PROJEKTU**: Masz dostęp do mapy istniejących plików. 
    - Jeśli zadanie dotyczy logiki, która już istnieje -> EDYTUJ ten plik. 
    - NIE TWÓRZ DUPLIKATÓW (np. jeśli jest `auth.py`, nie rób `login.py`).
-2. **PRECYZJA**: Używając `write_code_file`, parametr `description` musi być techniczny i konkretny.
+2. **PRECYZJA**: Używając `write_code_file`, parametr `description` musi być techniczny i konkretny plik główny nie może sie powtarzać.
 3. **KOMPLETNOŚĆ**: Kod musi być gotowy do uruchomienia. Żadnych placeholderów.
 4. **OSZCZĘDNOŚĆ**: Nie pytaj. Nie gadaj. Pisz kod i zapisuj.
-
 Jeśli widzisz w zadaniu nazwę pliku, UŻYJ JEJ.
 """
 
