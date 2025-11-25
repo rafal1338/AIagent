@@ -1,0 +1,41 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Wirtualne Środowiska (Bardzo ważne!) ---
+# Ignorujemy cały folder z bibliotekami, aby nie zaśmiecać repozytorium
+venv/
+.venv/
+env/
+ENV/
+chroma_db/
+# --- Zmienne Środowiskowe ---
+.env
+.env.local
+
+# --- IDE / Edytory ---
+.vscode/
+.idea/
+*.swp
+
+# --- Flask ---
+instance/
+.webassets-cache
+
+# --- Bazy danych wektorowych (ChromaDB) ---
+# Jeśli w przyszłości dodasz persystencję ChromaDB, to zazwyczaj tworzy ona folder:
+chroma_db/
+
+# --- Logi i pliki tymczasowe ---
+*.log
+*.spec
+
+# --- Folder z wygenerowanym kodem (OPCJONALNE) ---
+# Jeśli NIE chcesz, aby kod napisany przez AI (w folderze program) 
+# trafiał do Gita, odkomentuj poniższą linię:
+# program/
+
+# Zawsze ignorujemy pliki systemowe OS
+.DS_Store
+Thumbs.db
